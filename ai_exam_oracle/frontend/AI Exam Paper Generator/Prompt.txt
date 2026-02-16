@@ -1,0 +1,28 @@
+# 1. Reset and See the new Database data
+cd backend
+.\venv\Scripts\activate
+python seed_db.py
+
+# 2. Go back and Launch the App
+cd ..
+.\QUICK_START.bat
+
+
+GITHUB PUSH COMMANDS
+# 1. Completely remove the local git memory
+rm -rf .git
+
+# 2. Start a brand new, clean repository
+git init
+
+# 3. Connect it back to your GitHub
+git remote add origin https://github.com/VinzmokeZ/AI-Exam-Paper-Generator.git
+
+# 4. Add files (This time it will only add ~10MB because of the .gitignore)
+git add .
+
+# 5. Create a clean first commit
+git commit -m "initial clean push"
+
+# 6. Force the upload to overwrite the "bad" 600MB version on GitHub
+git push origin master --force
