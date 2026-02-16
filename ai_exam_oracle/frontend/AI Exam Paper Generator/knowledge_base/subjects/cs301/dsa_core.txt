@@ -1,0 +1,6 @@
+Data Structures and Algorithms
+1. Arrays: A linear data structure that stores elements of the same type in contiguous memory locations. Access time is O(1).
+2. Linked Lists: Elements are nodes with data and a pointer to the next node. Insertion is O(1) if you have the node, but access is O(n).
+3. Sorting: QuickSort and MergeSort are O(n log n). BubbleSort is O(n^2).
+4. Graphs: Represented by vertices and edges. BFS and DFS are common traversal algorithms.
+5. Operating Systems: Handles resource management, process scheduling, and memory allocation. Virtual memory allows processes to use more than physical RAM.

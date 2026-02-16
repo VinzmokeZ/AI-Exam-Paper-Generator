@@ -1,0 +1,32 @@
+# Virtual Environments
+**/venv/
+**/.venv/
+**/env/
+
+# Dependencies
+**/node_modules/
+**/dist/
+**/build/
+
+# Local AI Models (Huge files)
+**/local_models/
+**/chroma_db/
+**/backend_cache/
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+
+# IDEs
+**/.vscode/
+**/.idea/
+
+# Database & Logs
+**/*.db
+**/*.log
+**/*.sqlite3
+
+# Environment Secrets
+**/.env
+**/.env.local

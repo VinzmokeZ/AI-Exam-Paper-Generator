@@ -1,0 +1,328 @@
+{
+    "info": {
+        "name": "AI Exam Oracle API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "GET /api/subjects/",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/subjects/",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "subjects"
+                    ]
+                },
+                "description": "Get Subjects"
+            },
+            "response": []
+        },
+        {
+            "name": "POST /api/subjects/",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/subjects/",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "subjects"
+                    ]
+                },
+                "description": "Create Subject",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "GET /api/subjects/{subject_id}",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/subjects/{subject_id}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "subjects",
+                        "{subject_id}"
+                    ]
+                },
+                "description": "Get Subject"
+            },
+            "response": []
+        },
+        {
+            "name": "PUT /api/subjects/{subject_id}",
+            "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/subjects/{subject_id}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "subjects",
+                        "{subject_id}"
+                    ]
+                },
+                "description": "Update Subject"
+            },
+            "response": []
+        },
+        {
+            "name": "DELETE /api/subjects/{subject_id}",
+            "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/subjects/{subject_id}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "subjects",
+                        "{subject_id}"
+                    ]
+                },
+                "description": "Delete Subject"
+            },
+            "response": []
+        },
+        {
+            "name": "GET /api/subjects/{subject_id}/topics",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/subjects/{subject_id}/topics",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "subjects",
+                        "{subject_id}",
+                        "topics"
+                    ]
+                },
+                "description": "Get Topics"
+            },
+            "response": []
+        },
+        {
+            "name": "POST /api/subjects/{subject_id}/topics",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/subjects/{subject_id}/topics",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "subjects",
+                        "{subject_id}",
+                        "topics"
+                    ]
+                },
+                "description": "Create Topic",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "PUT /api/topics/{topic_id}",
+            "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/topics/{topic_id}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "topics",
+                        "{topic_id}"
+                    ]
+                },
+                "description": "Update Topic"
+            },
+            "response": []
+        },
+        {
+            "name": "DELETE /api/topics/{topic_id}",
+            "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/topics/{topic_id}",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "topics",
+                        "{topic_id}"
+                    ]
+                },
+                "description": "Delete Topic"
+            },
+            "response": []
+        },
+        {
+            "name": "POST /api/generate/questions",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/generate/questions",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "generate",
+                        "questions"
+                    ]
+                },
+                "description": "Generate Questions",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "POST /api/training/upload",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/training/upload",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "training",
+                        "upload"
+                    ]
+                },
+                "description": "Upload Document",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "POST /api/logs/",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/logs/",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "logs"
+                    ]
+                },
+                "description": "Create Log",
+                "body": {
+                    "mode": "raw",
+                    "raw": "{}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "GET /api/logs/monitor",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/logs/monitor",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": [
+                        "api",
+                        "logs",
+                        "monitor"
+                    ]
+                },
+                "description": "Get Recent Logs"
+            },
+            "response": []
+        },
+        {
+            "name": "GET /",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/",
+                    "host": [
+                        "{{base_url}}"
+                    ],
+                    "path": []
+                },
+                "description": "Root"
+            },
+            "response": []
+        }
+    ]
+}
