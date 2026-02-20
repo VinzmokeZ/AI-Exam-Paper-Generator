@@ -18,13 +18,25 @@ USE_MYSQL = os.getenv("USE_MYSQL", "true").lower() == "true"
 # Build database URL
 if USE_MYSQL:
     DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4"
-    engine = create_engine(
-        DATABASE_URL,
-        pool_pre_ping=True,
-        pool_recycle=3600,
-        pool_size=10,
-        max_overflow=20
-    )
+    try:
+        engine = create_engine(
+            DATABASE_URL,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+            pool_size=10,
+            max_overflow=20
+        )
+        # Test connection immediately
+        with engine.connect() as conn:
+            pass
+        print(f"[DB] ✅ Connected to MySQL at {DB_HOST}:{DB_PORT}/{DB_NAME}")
+    except Exception as e:
+        print(f"[DB] ⚠️ MySQL unavailable ({e}). Falling back to SQLite.")
+        DATABASE_URL = "sqlite:///./exam_oracle.db"
+        engine = create_engine(
+            DATABASE_URL,
+            connect_args={"check_same_thread": False}
+        )
 else:
     # Fallback to SQLite for development
     DATABASE_URL = "sqlite:///./exam_oracle.db"
@@ -32,6 +44,13 @@ else:
         DATABASE_URL,
         connect_args={"check_same_thread": False}
     )
+
+    from sqlalchemy import event
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

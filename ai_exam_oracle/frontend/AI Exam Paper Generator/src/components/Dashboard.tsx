@@ -14,15 +14,27 @@ import { Modal } from './Modal';
 export function Dashboard() {
   const navigate = useNavigate();
   const [showQuickActions, setShowQuickActions] = useState(false);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<any>(() => {
+    const saved = localStorage.getItem('ai_exam_user_profile');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [activities, setActivities] = useState<any[]>([]);
+  const [isBackendOnline, setIsBackendOnline] = useState(false);
   const [engineMode, setEngineMode] = useState<'local' | 'cloud'>(() => {
     return (localStorage.getItem('ai_engine_mode') as 'local' | 'cloud') || 'local';
   });
 
+  // Connection State
+  const [showConnectionHelper, setShowConnectionHelper] = useState(false);
+  const [tempApiUrl, setTempApiUrl] = useState(localStorage.getItem('custom_api_url') || '');
+
   // Profile Edit State
   const [showProfileEdit, setShowProfileEdit] = useState(false);
-  const [editUsername, setEditUsername] = useState('');
+  const [editUsername, setEditUsername] = useState(() => {
+    const saved = localStorage.getItem('ai_exam_user_profile');
+    if (saved) return JSON.parse(saved).username || '';
+    return 'Professor Vinz';
+  });
 
   // AI Generation State
   const [prompt, setPrompt] = useState('');
@@ -32,7 +44,12 @@ export function Dashboard() {
     const newMode = engineMode === 'local' ? 'cloud' : 'local';
     setEngineMode(newMode);
     localStorage.setItem('ai_engine_mode', newMode);
-    toast.success(`Switched to ${newMode === 'local' ? 'Offline Local' : 'Online Cloud'} Engine`);
+    toast.success(`Switched to ${newMode === 'local' ? 'Parallel Hybrid' : 'Direct Cloud'} Engine. Syncing...`);
+
+    // Refresh to update the global API_URL constant in api.ts
+    setTimeout(() => {
+      window.location.reload();
+    }, 1500);
   };
 
   useEffect(() => {
@@ -54,7 +71,16 @@ export function Dashboard() {
         console.error("Failed to fetch dashboard data:", error);
       }
     };
+    const checkConnection = async () => {
+      try {
+        await dashboardService.getStats();
+        setIsBackendOnline(true);
+      } catch {
+        setIsBackendOnline(false);
+      }
+    };
     fetchData();
+    checkConnection();
   }, []);
 
   const handleGenerate = () => {
@@ -65,15 +91,45 @@ export function Dashboard() {
     navigate('/generate', { state: { prompt } });
   };
 
+  const handleSaveApiUrl = () => {
+    if (tempApiUrl.trim()) {
+      let url = tempApiUrl.trim();
+      if (!url.startsWith('http')) url = 'https://' + url;
+      if (!url.endsWith('/api')) url = url.replace(/\/$/, '') + '/api';
+
+      localStorage.setItem('custom_api_url', url);
+      toast.success("API URL updated! Refreshing...");
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      localStorage.removeItem('custom_api_url');
+      toast.success("Reset to default API. Refreshing...");
+      setTimeout(() => window.location.reload(), 1500);
+    }
+  };
+
   const handleSaveProfile = async () => {
+    if (!editUsername.trim()) {
+      toast.error("Name cannot be empty");
+      return;
+    }
+
+    const previousUsername = stats?.username;
+
+    // Optimistic Update: Change name immediately for better UX
+    setStats((prev: any) => ({ ...(prev || {}), username: editUsername }));
+    setShowProfileEdit(false);
+
     try {
       const updatedStats = await gamificationService.updateProfile(1, editUsername); // Assuming user ID 1 for now
-      setStats(updatedStats);
-      setShowProfileEdit(false);
-      toast.success("Profile updated successfully!");
-    } catch (error) {
-      console.error("Failed to update profile:", error);
-      toast.error("Failed to update profile.");
+      // Merge all other stats returned (coins, xp, etc.)
+      setStats((prev: any) => ({ ...prev, ...updatedStats }));
+      toast.success("Profile saved!");
+    } catch (error: any) {
+      console.error("Profile update failed:", error);
+      // Rollback on failure
+      setStats((prev: any) => ({ ...prev, username: previousUsername }));
+      toast.error(`Could not save to backend: ${error.message || "Unknown Error"}`);
+      setShowProfileEdit(true); // Re-open if failed
     }
   };
 
@@ -149,7 +205,16 @@ export function Dashboard() {
             <div className="flex-1 min-w-0 mr-3">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-[10px] font-black text-[#0A1F1F]/40 uppercase tracking-widest">Global Engine Status</span>
-                <div className={`w-2 h-2 rounded-full animate-pulse ${engineMode === 'local' ? 'bg-orange-400' : 'bg-green-400'}`} />
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  onClick={() => setShowConnectionHelper(true)}
+                  className="flex items-center gap-1.5 px-2 py-0.5 bg-[#0A1F1F]/5 rounded-full border border-white/20 hover:bg-[#0A1F1F]/10 transition-all"
+                >
+                  <div className={`w-1.5 h-1.5 rounded-full ${isBackendOnline ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-[#0A1F1F]/20'}`} />
+                  <span className={`text-[8px] font-bold uppercase tracking-tighter ${isBackendOnline ? 'text-cyan-600' : 'text-[#0A1F1F]/40'}`}>
+                    {isBackendOnline ? (localStorage.getItem('custom_api_url') ? 'Parallel Live' : 'Link Active') : 'Link Dormant'}
+                  </span>
+                </motion.button>
               </div>
 
               <div className="flex items-center gap-2 mb-2">
@@ -236,19 +301,19 @@ export function Dashboard() {
 
               {/* Level & Progress */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-3 mb-2">
+                <div className="flex flex-wrap items-end justify-between gap-y-2 gap-x-4 mb-3">
                   <div>
                     <p className="text-[8px] text-[#0A1F1F] opacity-50 font-bold uppercase mb-0.5">Professor Level</p>
                     <p className="text-3xl font-bold text-[#0A1F1F] leading-none">{currentLevel}</p>
                   </div>
-                  <div className="flex items-baseline gap-3">
-                    <div>
+                  <div className="flex items-end gap-4">
+                    <div className="text-right">
                       <p className="text-[8px] text-[#0A1F1F] opacity-50 font-bold uppercase mb-0.5">Current XP</p>
-                      <p className="text-base font-bold text-[#C5B3E6]">{currentXP.toLocaleString()}</p>
+                      <p className="text-base font-bold text-[#C5B3E6] leading-none">{currentXP.toLocaleString()}</p>
                     </div>
-                    <div>
+                    <div className="text-right">
                       <p className="text-[8px] text-[#0A1F1F] opacity-50 font-bold uppercase mb-0.5">Next Level</p>
-                      <p className="text-base font-bold text-[#8BE9FD]">{nextLevelXP.toLocaleString()}</p>
+                      <p className="text-base font-bold text-[#8BE9FD] leading-none">{nextLevelXP.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
@@ -478,7 +543,7 @@ export function Dashboard() {
               <History className="w-5 h-5 text-[#C5B3E6]" />
               <h3 className="text-sm font-bold text-[#F5F1ED]">Recent Activity</h3>
             </div>
-            <button className="text-xs font-bold text-[#8B9E9E]">View all</button>
+            <button onClick={() => navigate('/reports')} className="text-xs font-bold text-[#8B9E9E] hover:text-[#C5B3E6] transition-colors">View all</button>
           </div>
 
           <div className="space-y-3">
@@ -785,6 +850,56 @@ export function Dashboard() {
           >
             Save Changes
           </motion.button>
+        </div>
+      </Modal>
+
+      {/* Connection Helper Modal */}
+      <Modal
+        isOpen={showConnectionHelper}
+        onClose={() => setShowConnectionHelper(false)}
+        title="Connection Helper"
+        subtitle="FIX YOUR CONNECTIVITY"
+      >
+        <div className="space-y-6">
+          <div className="bg-[#0A1F1F]/5 rounded-2xl p-4 border border-[#0A1F1F]/10">
+            <p className="text-xs text-[#0A1F1F] opacity-70 leading-relaxed">
+              If your status is <span className="text-red-600 font-bold">Offline</span>, it means the site can't find your laptop.
+              Copy the <span className="font-bold">https://...loca.lt</span> link from your Localtunnel terminal and paste it below.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest ml-1">Tunnel URL</label>
+            <div className="relative">
+              <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B9E9E]" />
+              <input
+                type="text"
+                value={tempApiUrl}
+                onChange={(e) => setTempApiUrl(e.target.value)}
+                className="w-full bg-white rounded-[20px] pl-12 pr-6 py-4 text-[#0A1F1F] font-bold outline-none shadow-sm border border-transparent focus:border-[#4D76FD]/30 transition-all text-sm"
+                placeholder="https://ai-exam-vinz.loca.lt"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => { setTempApiUrl(''); localStorage.removeItem('custom_api_url'); handleSaveApiUrl(); }}
+              className="flex-1 py-4 bg-white border-2 border-[#E5DED6] rounded-[20px] text-[#0A1F1F] font-bold text-sm shadow-sm"
+            >
+              Reset Default
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSaveApiUrl}
+              className="flex-1 py-4 bg-[#4D76FD] hover:bg-[#3D5ECF] rounded-[20px] text-white font-bold text-sm shadow-xl shadow-[#4D76FD]/20"
+            >
+              Update URL
+            </motion.button>
+          </div>
         </div>
       </Modal>
 

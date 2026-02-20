@@ -1,9 +1,7 @@
 import { api } from './api';
 
-const API_BASE_URL = `http://${window.location.hostname}:8000`;
-
 export interface QuestionDistribution {
-    question_type: 'MCQ' | 'Short' | 'Essay';
+    question_type: 'MCQ' | 'Short' | 'Essay' | 'Case Study';
     count: number;
     marks_each: number;
 }
@@ -31,12 +29,12 @@ export interface RubricResponse extends RubricCreate {
 
 class RubricService {
     async createRubric(rubric: RubricCreate): Promise<RubricResponse> {
-        const response = await api.post('/rubrics', rubric);
+        const response = await api.post('/rubrics/', rubric);
         return response.data;
     }
 
     async listRubrics(): Promise<RubricResponse[]> {
-        const response = await api.get('/rubrics');
+        const response = await api.get('/rubrics/');
         return response.data;
     }
 
@@ -65,8 +63,11 @@ class RubricService {
         log: any;
         message?: string;
         error?: string;
+        questions?: any[];
+        all_questions?: any[];
     }> {
-        const response = await api.post(`/generate/rubric/${rubricId}`);
+        const engine = localStorage.getItem('ai_engine_mode') || 'local';
+        const response = await api.post(`/generate/rubric/${rubricId}?engine=${engine}`);
         if (!response.data.success) {
             throw new Error(response.data.error || 'Generation failed');
         }

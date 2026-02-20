@@ -7,6 +7,8 @@ from typing import List
 
 router = APIRouter()
 
+from datetime import datetime
+
 class NotificationOut(BaseModel):
     id: int
     title: str
@@ -16,7 +18,7 @@ class NotificationOut(BaseModel):
     color: str
     icon_name: str
     link: str | None
-    timestamp: str
+    timestamp: datetime
 
     class Config:
         orm_mode = True

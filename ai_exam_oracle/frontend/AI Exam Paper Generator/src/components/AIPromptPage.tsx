@@ -17,27 +17,40 @@ export function AIPromptPage() {
     const [prompt, setPrompt] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(true);
+    const [activeEngine, setActiveEngine] = useState('local');
+    const [isCloudOnline, setIsCloudOnline] = useState(false);
+
+    useEffect(() => {
+        const checkHealth = async () => {
+            try {
+                const { api } = await import('../services/api');
+                const response = await api.get('/health');
+                if (response.data.cloud === 'online') {
+                    setActiveEngine('cloud');
+                    setIsCloudOnline(true);
+                }
+            } catch (err) {
+                console.error("Health check failed in Prompt Page", err);
+            }
+        };
+        checkHealth();
+    }, []);
 
     // Retrieve passed subjectId if available
     const subjectId = location.state?.subjectId;
 
     const handleGenerate = () => {
         if (prompt.trim()) {
-            setIsGenerating(true);
-            // Simulate AI processing time
-            setTimeout(() => {
-                setIsGenerating(false);
-                // Navigate back to GenerateExam with the prompt
-                // Use 'replace' to avoid building up history
-                navigate('/generate', {
-                    state: {
-                        prompt: prompt,
-                        method: 'ai',
-                        subjectId: subjectId
-                    },
-                    replace: true
-                });
-            }, 3000);
+            // Navigate immediately to the generator to show the real progress UI
+            navigate('/generate', {
+                state: {
+                    prompt: prompt,
+                    method: 'ai',
+                    subjectId: subjectId,
+                    engine: activeEngine
+                },
+                replace: true
+            });
         }
     };
 
@@ -54,8 +67,8 @@ export function AIPromptPage() {
     const maxChars = 500;
 
     return (
-        // Changed to absolute inset-0 to fit within the Layout/Phone Frame
-        <div className="absolute inset-0 bg-[#0A2F2F]/95 backdrop-blur-sm z-50 flex items-end justify-center p-6 pb-24">
+        // Added pt-20 to ensure it never covers the status bar/time
+        <div className="absolute inset-0 bg-[#0A2F2F]/95 backdrop-blur-sm z-[100] flex items-center justify-center p-6 pt-20 pb-24">
             {/* Floating particles background */}
             {[...Array(8)].map((_, i) => (
                 <motion.div
@@ -144,14 +157,16 @@ export function AIPromptPage() {
                                 opacity: [0.5, 1, 0.5],
                             }}
                             transition={{ duration: 2, repeat: Infinity }}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#0D2626] rounded-xl w-fit"
+                            className={`flex items-center gap-2 px-4 py-2 ${isCloudOnline ? 'bg-[#50FA7B]/10 border border-[#50FA7B]/30' : 'bg-[#0D2626]'} rounded-xl w-fit`}
                         >
                             <motion.div
                                 animate={{ scale: [1, 1.2, 1] }}
                                 transition={{ duration: 1.5, repeat: Infinity }}
-                                className="w-2 h-2 bg-[#50FA7B] rounded-full"
+                                className={`w-2 h-2 ${isCloudOnline ? 'bg-[#50FA7B]' : 'bg-[#C5B3E6]'} rounded-full shadow-[0_0_8px_rgba(80,250,123,0.5)]`}
                             />
-                            <span className="text-xs font-bold text-[#50FA7B]">AI Ready</span>
+                            <span className={`text-xs font-bold ${isCloudOnline ? 'text-[#50FA7B]' : 'text-[#C5B3E6]'}`}>
+                                {isCloudOnline ? 'Gemini Cloud (Active)' : 'Local AI Ready'}
+                            </span>
                         </motion.div>
                     </div>
 

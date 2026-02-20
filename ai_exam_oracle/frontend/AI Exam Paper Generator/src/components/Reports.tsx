@@ -4,11 +4,12 @@ import { Link } from 'react-router-dom';
 import {
   ArrowLeft, BarChart3, FileText, CheckCircle2, XCircle, Clock,
   TrendingUp, Target, Brain, BookOpen, Users, Download, ChevronDown,
-  ChevronUp, AlertTriangle, Sparkles, Loader2
+  ChevronUp, AlertTriangle, Sparkles, Loader2, Trash2, Eye
 } from 'lucide-react';
 import { dashboardService, historyService, subjectService } from '../services/api';
 import { toast } from 'sonner';
 import { DEFAULT_SUBJECTS } from '../constants/defaultData';
+import { ExamStructurePreview } from './ExamStructurePreview';
 
 export function Reports() {
   const [selectedSubject, setSelectedSubject] = useState('all');
@@ -25,6 +26,7 @@ export function Reports() {
   const [paperHistory, setPaperHistory] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [viewingPaper, setViewingPaper] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -91,6 +93,80 @@ export function Reports() {
 
   const maxCount = reportData?.blooms ? Math.max(...reportData.blooms.map((d: any) => d.count)) : 0;
 
+  const handleDeleteHistory = async (id: number) => {
+    try {
+      await historyService.deleteHistory(id);
+      setPaperHistory(prev => prev.filter(p => p.id !== id));
+      toast.success("History deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete history:", error);
+      toast.error("Failed to delete history");
+    }
+  };
+
+  /*
+   * PDF Download Handler
+   */
+  const handlePhysicalDownload = (paper: any) => {
+    try {
+      const subjectName = paper.subject_name || paper.subject || 'Exam';
+      const topicName = paper.topic_name || `Exam_${paper.id}`;
+      const questionsData = Array.isArray(paper.questions) ? paper.questions : [];
+
+      import('../services/pdfGenerator').then(({ generateExamPDF }) => {
+        generateExamPDF({
+          subject_name: subjectName,
+          topic_name: topicName,
+          questions: questionsData,
+          total_marks: paper.marks || paper.total_marks || 0,
+          duration: paper.duration || 60,
+          generated_date: paper.created_at || paper.date
+        });
+        toast.success("Exam PDF downloading...");
+      });
+    } catch (e) {
+      console.error("PDF Generation failed:", e);
+      toast.error("Failed to generate PDF");
+    }
+  };
+
+
+  const handleExportFullReport = () => {
+    try {
+      const data = {
+        overview: reportData?.overview || {
+          generated: 0,
+          approved: 0,
+          rejected: 0,
+          pending: 0,
+          approvalRate: 0
+        },
+        learningOutcomes: learningOutcomes,
+        blooms: bloomsData,
+        syllabus: syllabusTopics
+      };
+
+      import('../services/reportGenerator').then(({ generateReportPDF }) => {
+        generateReportPDF(data);
+        toast.success("Generating Analytics Report PDF...");
+      });
+    } catch (e) {
+      console.error("Report export failed:", e);
+      toast.error("Failed to export report");
+    }
+  };
+
+  if (viewingPaper) {
+    return (
+      <ExamStructurePreview
+        questions={viewingPaper.questions || []}
+        subjectName={viewingPaper.subject_name || viewingPaper.subject || 'Exam'}
+        rubricName={viewingPaper.rubric_name || viewingPaper.topic_name}
+        onBack={() => setViewingPaper(null)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-full pb-6">
       {/* Floating background elements */}
@@ -123,7 +199,8 @@ export function Reports() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="w-10 h-10 bg-[#8BE9FD]/20 rounded-xl flex items-center justify-center"
+              onClick={() => window.print()}
+              className="w-10 h-10 bg-[#8BE9FD]/20 rounded-xl flex items-center justify-center print:hidden"
             >
               <Download className="w-5 h-5 text-[#8BE9FD]" />
             </motion.button>
@@ -298,19 +375,46 @@ export function Reports() {
                       >
                         <div className="flex items-center justify-between relative z-10">
                           <div className="flex-1">
-                            <h3 className="font-black text-[#0A1F1F] text-sm mb-1">{paper.name || `Exam ${paper.id}`}</h3>
+                            <h3 className="font-black text-[#0A1F1F] text-sm mb-1">{paper.topic_name || paper.name || `Exam ${paper.id}`}</h3>
                             <p className="text-[10px] text-[#0A1F1F] opacity-60 font-bold uppercase">
-                              {paper.subject || 'Subject'} • {paper.question_count || paper.qs || 0} QS • {paper.total_marks || paper.marks || 0} MARKS
+                              {paper.subject_name || paper.subject || 'Subject'} • {paper.questions_count || paper.question_count || paper.qs || 0} QS • {paper.marks || paper.total_marks || 0} MARKS
                             </p>
                             <p className="text-[9px] text-[#0A1F1F] opacity-40 font-medium">Generated on {paper.created_at ? new Date(paper.created_at).toLocaleDateString() : (paper.date || 'Unknown Date')}</p>
                           </div>
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            className="w-10 h-10 bg-[#0A1F1F] rounded-xl flex items-center justify-center shadow-lg"
-                          >
-                            <Download className="w-5 h-5 text-[#C5B3E6]" />
-                          </motion.button>
+                          <div className="flex items-center gap-2">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => {
+                                handlePhysicalDownload(paper);
+                                setViewingPaper(paper);
+                                // Small delay to allow render before printing
+                                setTimeout(() => window.print(), 1000);
+                              }}
+                              className="w-8 h-8 bg-[#50FA7B]/20 rounded-lg flex items-center justify-center"
+                              title="Download PDF"
+                            >
+                              <Download className="w-4 h-4 text-[#50FA7B]" />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => setViewingPaper(paper)}
+                              className="w-8 h-8 bg-[#8BE9FD]/20 rounded-lg flex items-center justify-center"
+                              title="View"
+                            >
+                              <Eye className="w-4 h-4 text-[#8BE9FD]" />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleDeleteHistory(paper.id)}
+                              className="w-8 h-8 bg-[#FF6AC1]/20 rounded-lg flex items-center justify-center"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4 text-[#FF6AC1]" />
+                            </motion.button>
+                          </div>
                         </div>
                       </motion.div>
                     ))
@@ -520,14 +624,14 @@ export function Reports() {
         </motion.div>
       </div>
 
-      {/* Export Button */}
-      <div className="mx-6 mb-6 relative z-10">
+      <div className="mx-6 mb-6 relative z-10 print:hidden">
         <motion.button
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45 }}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          onClick={handleExportFullReport}
           className="w-full bg-gradient-to-br from-[#8BE9FD] to-[#6FEDD6] rounded-2xl py-5 font-bold text-[#0A1F1F] flex items-center justify-center gap-3 border-4 border-white/30 relative overflow-hidden"
         >
           <motion.div
@@ -539,6 +643,15 @@ export function Reports() {
           <span className="text-base">Export Full Report (PDF)</span>
         </motion.button>
       </div>
+
+      <style>{`
+        @media print {
+          .print\\:hidden { display: none !important; }
+          body { background: white !important; color: black !important; }
+          .bg-gradient-to-br { background: none !important; border: 1px solid #ccc !important; }
+          .text-white, .text-\\[\\#F5F1ED\\] { color: black !important; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import os
 import shutil
-from ..services.rag_service import rag_service
+from ..services.rag_service import get_rag_service
 
 class TrainingService:
     def __init__(self):
@@ -14,6 +14,7 @@ class TrainingService:
         try:
             # Step 1: Ingest into RAG (Immediate Benefit)
             print(f"Training: Ingesting {file_path} into Knowledge Base...")
+            rag_service = get_rag_service()
             chunks = rag_service.process_file(file_path, subject_id, topic_id)
             
             # Step 2: Fine-Tuning (Simulated/Placeholder for now)

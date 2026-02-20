@@ -1,0 +1,238 @@
+﻿npx : [33mThe CJS 
+build of Vite's 
+Node API is 
+deprecated. See htt
+ps://vite.dev/guide
+/troubleshooting.ht
+ml#vite-cjs-node-ap
+i-deprecated for 
+more details.[39m
+At line:1 char:1
++ npx vite build 
+2>&1 | Out-File 
+-FilePath 
+build_error.txt 
+-Encoding UT ...
++ 
+~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo 
+             : No  
+  tSpecified: (   
+ [33mThe CJS bu    
+...e details.    
+[39m:String) [    
+], RemoteExcep    
+tion
+    + FullyQualifi 
+   edErrorId : Na  
+  tiveCommandErr   
+ or
+ 
+[36mvite v6.3.5 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 2375 modules transformed.
+[33m[plugin 
+vite:reporter] 
+(!) C:/Users/Vinz/D
+ownloads/Internship
+ Project/ai_exam_or
+acle/frontend/AI 
+Exam Paper Generato
+r/src/constants/def
+aultData.ts is 
+dynamically 
+imported by C:/User
+s/Vinz/Downloads/In
+ternship Project/ai
+_exam_oracle/fronte
+nd/AI Exam Paper Ge
+nerator/src/compone
+nts/CreateRubric.ts
+x, C:/Users/Vinz/Do
+wnloads/Internship 
+Project/ai_exam_ora
+cle/frontend/AI 
+Exam Paper Generato
+r/src/components/Cr
+eateRubric.tsx but 
+also statically 
+imported by C:/User
+s/Vinz/Downloads/In
+ternship Project/ai
+_exam_oracle/fronte
+nd/AI Exam Paper Ge
+nerator/src/compone
+nts/GenerateExam.ts
+x, C:/Users/Vinz/Do
+wnloads/Internship 
+Project/ai_exam_ora
+cle/frontend/AI 
+Exam Paper Generato
+r/src/components/Re
+ports.tsx, C:/Users
+/Vinz/Downloads/Int
+ernship Project/ai_
+exam_oracle/fronten
+d/AI Exam Paper Gen
+erator/src/componen
+ts/SubjectDetail.ts
+x, C:/Users/Vinz/Do
+wnloads/Internship 
+Project/ai_exam_ora
+cle/frontend/AI 
+Exam Paper Generato
+r/src/services/api.
+ts, dynamic import 
+will not move 
+module into 
+another chunk.
+[39m
+[33m[plugin 
+vite:reporter] 
+(!) C:/Users/Vinz/D
+ownloads/Internship
+ Project/ai_exam_or
+acle/frontend/AI 
+Exam Paper Generato
+r/src/services/api.
+ts is dynamically 
+imported by C:/User
+s/Vinz/Downloads/In
+ternship Project/ai
+_exam_oracle/fronte
+nd/AI Exam Paper Ge
+nerator/src/compone
+nts/AIPromptBox.tsx
+, C:/Users/Vinz/Dow
+nloads/Internship P
+roject/ai_exam_orac
+le/frontend/AI 
+Exam Paper Generato
+r/src/components/Ac
+hievements.tsx, C:/
+Users/Vinz/Download
+s/Internship Projec
+t/ai_exam_oracle/fr
+ontend/AI Exam 
+Paper Generator/src
+/components/Subject
+Library.tsx, C:/Use
+rs/Vinz/Downloads/I
+nternship Project/a
+i_exam_oracle/front
+end/AI Exam Paper G
+enerator/src/compon
+ents/VettingCenter.
+tsx but also 
+statically 
+imported by C:/User
+s/Vinz/Downloads/In
+ternship Project/ai
+_exam_oracle/fronte
+nd/AI Exam Paper Ge
+nerator/src/App.tsx
+, C:/Users/Vinz/Dow
+nloads/Internship P
+roject/ai_exam_orac
+le/frontend/AI 
+Exam Paper Generato
+r/src/components/Ac
+hievements.tsx, C:/
+Users/Vinz/Download
+s/Internship Projec
+t/ai_exam_oracle/fr
+ontend/AI Exam 
+Paper Generator/src
+/components/CreateR
+ubric.tsx, C:/Users
+/Vinz/Downloads/Int
+ernship Project/ai_
+exam_oracle/fronten
+d/AI Exam Paper Gen
+erator/src/componen
+ts/Dashboard.tsx, C
+:/Users/Vinz/Downlo
+ads/Internship Proj
+ect/ai_exam_oracle/
+frontend/AI Exam 
+Paper Generator/src
+/components/Generat
+eExam.tsx, C:/Users
+/Vinz/Downloads/Int
+ernship Project/ai_
+exam_oracle/fronten
+d/AI Exam Paper Gen
+erator/src/componen
+ts/Notifications.ts
+x, C:/Users/Vinz/Do
+wnloads/Internship 
+Project/ai_exam_ora
+cle/frontend/AI 
+Exam Paper Generato
+r/src/components/Re
+ports.tsx, C:/Users
+/Vinz/Downloads/Int
+ernship Project/ai_
+exam_oracle/fronten
+d/AI Exam Paper Gen
+erator/src/componen
+ts/Settings.tsx, C:
+/Users/Vinz/Downloa
+ds/Internship Proje
+ct/ai_exam_oracle/f
+rontend/AI Exam 
+Paper Generator/src
+/components/Subject
+Detail.tsx, C:/User
+s/Vinz/Downloads/In
+ternship Project/ai
+_exam_oracle/fronte
+nd/AI Exam Paper Ge
+nerator/src/compone
+nts/SubjectLibrary.
+tsx, C:/Users/Vinz/
+Downloads/Internshi
+p Project/ai_exam_o
+racle/frontend/AI 
+Exam Paper Generato
+r/src/components/Ve
+ttingCenter.tsx, C:
+/Users/Vinz/Downloa
+ds/Internship Proje
+ct/ai_exam_oracle/f
+rontend/AI Exam 
+Paper Generator/src
+/services/rubricSer
+vice.ts, dynamic 
+import will not 
+move module into 
+another chunk.
+[39m
+rendering chunks...
+computing gzip size...
+[2mbuild/[22m[32mindex.html                 [39m[1m[2m  0.44 kB[22m[1m[22m[2m Γöé gzip:   0.29 kB[22m
+[2mbuild/[22m[35massets/index-COkMnjdw.css  [39m[1m[2m 48.26 kB[22m[1m[22m[2m Γöé gzip:   8.50 kB[22m
+[2mbuild/[22m[36massets/index-kd9zgj5M.js   [39m[1m[33m649.27 kB[39m[22m[2m Γöé gzip: 183.48 kB[22m
+[33m
+(!) Some chunks 
+are larger than 
+500 kB after 
+minification. 
+Consider:
+- Using dynamic 
+import() to 
+code-split the 
+application
+- Use build.rollupO
+ptions.output.manua
+lChunks to improve 
+chunking: https://r
+ollupjs.org/configu
+ration-options/#out
+put-manualchunks
+- Adjust chunk 
+size limit for 
+this warning via bu
+ild.chunkSizeWarnin
+gLimit.[39m
+[32mΓ£ô built in 6.36s[39m

@@ -1,252 +1,432 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, X, CheckCircle2, Sparkles, FileText, ChevronRight, Loader2, Database, Trash2, Zap, Trophy, ShieldCheck, AlertCircle, Target } from 'lucide-react';
-import { vettingService, gamificationService } from '../services/api';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Check, X, Edit2, Send, Target, ArrowLeft, CheckCircle2, Zap, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { courseOutcomeService, CourseOutcome } from '../services/courseOutcomeService';
+import { historyService } from '../services/api';
+import { ExamStructurePreview } from './ExamStructurePreview';
 
-interface Question {
-  id: number;
-  type: string;
-  question_text: string;
-  options?: string[];
-  correct_answer?: string;
-  subject_name: string;
-  topic_name?: string;
-  course_outcome?: string;
-  bloom_level?: string;
+const defaultQuestions = [
+  {
+    id: 1,
+    type: 'MCQ',
+    question: 'What is the time complexity of binary search?',
+    options: ['O(n)', 'O(log n)', 'O(n²)', 'O(1)'],
+    correctAnswer: 1,
+    subject: 'Computer Science',
+    courseOutcomes: { co1: 1, co2: 3, co3: 2, co4: 1, co5: 3 },
+  },
+  {
+    id: 2,
+    type: 'ESSAY',
+    question: 'Explain the concept of recursion with a real-world example.',
+    subject: 'Computer Science',
+    courseOutcomes: { co1: 1, co2: 2, co3: 3, co4: 1, co5: 1 },
+  },
+  {
+    id: 3,
+    type: 'MCQ',
+    question: 'Which data structure uses LIFO principle?',
+    options: ['Queue', 'Stack', 'Tree', 'Graph'],
+    correctAnswer: 1,
+    subject: 'Data Structures',
+    courseOutcomes: { co1: 2, co2: 1, co3: 1, co4: 2, co5: 1 },
+  },
+];
+
+const courseOutcomes = [
+  { code: 'CO1', label: 'Analyze', color: '#8BE9FD' },
+  { code: 'CO2', label: 'Knowledge', color: '#C5B3E6' },
+  { code: 'CO3', label: 'Apply', color: '#FFB86C' },
+  { code: 'CO4', label: 'Evaluate', color: '#FF6AC1' },
+  { code: 'CO5', label: 'Create', color: '#50FA7B' },
+];
+
+
+interface VettingState {
+  questions: any[];
+  subjectName?: string;
+  topicName?: string;
+  duration?: number;
+  rubricName?: string;
 }
 
 export function VettingCenter() {
+  const location = useLocation();
   const navigate = useNavigate();
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const state = location.state as VettingState;
+
+  const [questions, setQuestions] = useState<any[]>(defaultQuestions);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [courseOutcomes, setCourseOutcomes] = useState<CourseOutcome[]>([]);
-  const [selectedCO, setSelectedCO] = useState<string>('');
+  const [vettedQuestions, setVettedQuestions] = useState<Record<number, 'approved' | 'rejected'>>({});
+  const [editMode, setEditMode] = useState(false);
+  const [selectedCOLevels, setSelectedCOLevels] = useState(defaultQuestions[0].courseOutcomes);
+  const [showStructurePreview, setShowStructurePreview] = useState(false);
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const outcomes = await courseOutcomeService.listCourseOutcomes();
-      setCourseOutcomes(outcomes);
-
-      const data = await vettingService.getDrafts();
-      if (data && data.length > 0) {
-        setQuestions(data);
-        if (data[0].course_outcome) {
-          setSelectedCO(data[0].course_outcome);
-        } else if (outcomes.length > 0) {
-          setSelectedCO(outcomes[0].code);
-        }
-      }
-    } catch (error) {
-      toast.error('Failed to load vetting data');
-    } finally {
-      setLoading(false);
+    if (state?.questions) {
+      setQuestions(state.questions);
+      setSelectedCOLevels(state.questions[0]?.courseOutcomes || defaultQuestions[0].courseOutcomes);
     }
-  };
+  }, [location.state]);
 
   const currentQuestion = questions[currentIndex];
-  const progress = questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0;
-
-  const handleApprove = async () => {
-    try {
-      const selectedOutcome = courseOutcomes.find(co => co.code === selectedCO);
-      await vettingService.updateQuestion(currentQuestion.id, {
-        course_outcome: selectedCO,
-        bloom_level: selectedOutcome?.bloom_level || 1,
-        status: 'approved'
-      });
-
-      try { await gamificationService.addXP(1, 50); } catch (e) { }
-
-      toast.success('Question Approved! (+50 XP)');
-      handleNext();
-    } catch (error) {
-      toast.error('Approval failed');
-    }
-  };
-
-  const handleReject = async () => {
-    try {
-      await vettingService.updateStatus(currentQuestion.id, 'rejected');
-      toast.error('Question Rejected');
-      handleNext();
-    } catch (error) {
-      toast.error('Rejection failed');
-    }
-  };
-
-  const handleNext = () => {
-    if (currentIndex < questions.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      setQuestions([]);
-      toast.success('All questions reviewed!');
-    }
-  };
-
-  if (loading) {
+  // Guard clause if questions array is empty or undefined
+  if (!currentQuestion) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-[#0A1F1F]">
-        <Loader2 className="w-12 h-12 text-[#C5B3E6] animate-spin mb-4" />
-        <p className="text-[#8B9E9E] font-black uppercase tracking-widest text-xs">Accessing Vault...</p>
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#F5F1ED] p-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-[#0A1F1F] mb-4">No Questions Found</h2>
+          <p className="text-[#8B9E9E] mb-8">It seems the generation didn't return any questions to vet.</p>
+          <button
+            onClick={() => navigate('/generate')}
+            className="bg-[#0A1F1F] text-white px-8 py-3 rounded-xl font-bold"
+          >
+            Back to Generator
+          </button>
+        </div>
       </div>
     );
   }
 
+  const progressPercent = ((currentIndex + 1) / questions.length) * 100;
+  const totalQuestions = questions.length;
+
+  const handleNext = () => {
+    if (currentIndex < questions.length - 1) {
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      setEditMode(false);
+      setSelectedCOLevels(questions[nextIndex]?.courseOutcomes || defaultQuestions[0].courseOutcomes);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      const prevIndex = currentIndex - 1;
+      setCurrentIndex(prevIndex);
+      setEditMode(false);
+      setSelectedCOLevels(questions[prevIndex]?.courseOutcomes || defaultQuestions[0].courseOutcomes);
+    }
+  };
+
+  const handleApprove = () => {
+    setVettedQuestions({ ...vettedQuestions, [currentQuestion.id]: 'approved' });
+    handleSubmitNext();
+  };
+
+  const handleReject = () => {
+    setVettedQuestions({ ...vettedQuestions, [currentQuestion.id]: 'rejected' });
+    handleSubmitNext();
+  };
+
+  const handleComplete = async () => {
+    const approved = questions.filter(q => vettedQuestions[q.id] === 'approved' || (!vettedQuestions[q.id] && q.id === currentQuestion.id));
+
+    if (approved.length === 0) {
+      toast.error("Please approve at least one question!");
+      return;
+    }
+
+    // 1. Update statuses in backend
+    try {
+      const { vettingService, gamificationService } = await import('../services/api');
+      await Promise.all(approved.map(q => vettingService.updateStatus(q.id, 'approved')));
+
+      // 2. Create history record (Silent Save)
+      await historyService.saveHistory({
+        name: `${state?.subjectName || currentQuestion.subject_name || 'General'} Exam`,
+        subject: state?.subjectName || currentQuestion.subject_name || currentQuestion.subject || 'General',
+        subject_name: state?.subjectName || currentQuestion.subject_name || currentQuestion.subject || 'General',
+        topic_name: state?.topicName || currentQuestion.topic_name || 'AI Generated',
+        question_count: approved.length,
+        qs: approved.length,
+        total_marks: approved.reduce((acc, q) => acc + (q.marks || 0), 0) || (approved.length * 2),
+        marks: approved.reduce((acc, q) => acc + (q.marks || 0), 0) || (approved.length * 2),
+        duration: state?.duration || 60,
+        questions: approved.map(q => ({ ...q, status: 'approved' })),
+        created_at: new Date().toISOString(),
+        date: new Date().toLocaleDateString()
+      });
+
+      // 3. Reward user
+      await gamificationService.addXP(1, approved.length * 10);
+      toast.success("Exam Saved! Opening Preview...");
+
+      // 4. Show Structure Preview
+      setShowStructurePreview(true);
+
+    } catch (error) {
+      console.error("Vetting completion failed:", error);
+      toast.error("Failed to save history. Please try again.");
+    }
+  };
+
+  const handleSubmitNext = () => {
+    if (currentIndex === questions.length - 1) {
+      handleComplete();
+    } else {
+      handleNext();
+    }
+  };
+
+  const setCOLevel = (coKey: string, level: number) => {
+    setSelectedCOLevels(prev => ({
+      ...prev,
+      [coKey]: level
+    }));
+  };
+
+  const getDifficultyLabel = (level: number) => {
+    if (level === 1) return 'Mild';
+    if (level === 2) return 'Moderate';
+    return 'High';
+  };
+
+  const getDifficultyColor = (level: number) => {
+    if (level === 1) return '#F1FA8C';
+    if (level === 2) return '#FFB86C';
+    return '#FF6AC1';
+  };
+
+  if (showStructurePreview) {
+    const approvedQuestions = questions.filter(q => vettedQuestions[q.id] === 'approved' || (!vettedQuestions[q.id]));
+    return (
+      <ExamStructurePreview
+        questions={approvedQuestions}
+        subjectName={currentQuestion.subject || 'Computer Science'}
+        rubricName={state?.rubricName}
+        onBack={() => setShowStructurePreview(false)}
+      />
+    );
+  }
+
   return (
-    <div className="h-full bg-[#0A1F1F] flex flex-col overflow-hidden">
-      {/* Premium Header */}
-      <div className="px-8 pb-6 pt-16 shrink-0 relative overflow-hidden bg-[#0A1F1F]">
-        <div className="absolute top-0 right-0 w-48 h-48 bg-[#C5B3E6]/10 rounded-full blur-[80px] -translate-y-24 translate-x-24" />
+    <div className="min-h-full pb-6">
+      {/* Floating background elements */}
+      <div className="fixed top-20 left-10 w-40 h-40 bg-[#FFB86C]/10 rounded-full blur-3xl float-slow" />
+      <div className="fixed bottom-40 right-10 w-36 h-36 bg-[#C5B3E6]/10 rounded-full blur-3xl float-slow float-delay-1" />
 
-        <div className="flex items-center gap-4 relative z-10">
-          <Link to="/">
-            <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="w-8 h-8 bg-[#0D2626] rounded-xl flex items-center justify-center border-2 border-[#1A3A3A] shadow-md">
-              <ArrowLeft className="w-4 h-4 text-white" strokeWidth={3} />
-            </motion.button>
-          </Link>
+      {/* Header */}
+      <div className="mx-6 mt-4 mb-6 relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-br from-[#8BE9FD] to-[#6FEDD6] rounded-[32px] p-6 border-4 border-white/30 relative overflow-hidden"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Link to="/">
+                <motion.div
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  className="w-10 h-10 bg-white/30 backdrop-blur-sm rounded-xl flex items-center justify-center border-2 border-white/40"
+                >
+                  <ArrowLeft className="w-5 h-5 text-[#0A1F1F]" />
+                </motion.div>
+              </Link>
+              <div>
+                <h1 className="text-xl font-bold text-[#0A1F1F]">Vetting</h1>
+                <p className="text-xs text-[#0A1F1F] opacity-70 font-medium">
+                  Step {currentIndex + 1} of {totalQuestions}
+                </p>
+              </div>
+            </div>
 
-          <div className="flex-1">
-            <h1 className="text-2xl font-black text-white leading-none italic">Vetting Center</h1>
-            <p className="text-[10px] font-black text-[#8B9E9E] uppercase tracking-[0.2em] mt-2 opacity-60">Quality Assurance Protocol</p>
+            {/* Question Type Badge */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring' }}
+              className="px-4 py-2 bg-white/30 backdrop-blur-sm rounded-2xl border-2 border-white/40"
+            >
+              <span className="text-sm font-bold text-[#0A1F1F]">{currentQuestion.question_type || currentQuestion.type || 'MCQ'}</span>
+            </motion.div>
           </div>
 
-          <div className="flex items-center gap-2 bg-[#1A3A3A] px-4 py-2 rounded-2xl border-2 border-[#2D4E4E]">
-            <ShieldCheck className="w-4 h-4 text-[#50FA7B]" />
-            <span className="text-xs font-black text-white">{questions.length} DRAFTS</span>
+          {/* Progress Bar */}
+          <div className="bg-white/30 rounded-full h-2 overflow-hidden relative">
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 0.5 }}
+              className="h-full bg-gradient-to-r from-[#0A1F1F] to-[#0D2626] relative"
+            >
+              <motion.div
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/40 to-transparent"
+              />
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto px-6 pb-40 space-y-6">
+      {/* Question Card */}
+      <div className="mx-6 mb-6 relative z-10">
         <AnimatePresence mode="wait">
-          {!currentQuestion ? (
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center -mt-20">
-              <div className="w-20 h-20 bg-gradient-to-br from-[#1A3A3A] to-[#0A1F1F] rounded-[24px] flex items-center justify-center mb-6 shadow-2xl border-2 border-[#C5B3E6]/20">
-                <Trophy className="w-8 h-8 text-[#C5B3E6]" />
+          <motion.div
+            key={currentQuestion.id || currentIndex}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white rounded-[32px] p-6 border-4 border-[#E5DED6] relative overflow-hidden"
+          >
+            {/* Short Notes Badge - New Addition */}
+            {(currentQuestion.type === 'Short' || currentQuestion.question_type === 'Short') && (
+              <div className="absolute top-0 right-0 bg-[#FFB86C] px-4 py-1 rounded-bl-2xl font-bold text-[10px] text-[#0A1F1F] uppercase tracking-wider">
+                Short Notes
               </div>
-              <h2 className="text-xl font-black text-white mb-2 italic">Queue Empty!</h2>
-              <p className="text-[#8B9E9E] font-bold text-[10px] max-w-[200px] mb-8 leading-relaxed">All generated questions have been processed into the knowledge base.</p>
+            )}
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/generate')}
-                className="bg-[#C5B3E6]/10 border-2 border-[#C5B3E6]/30 text-[#C5B3E6] px-6 py-3 rounded-[20px] font-black uppercase tracking-widest text-[10px] hover:bg-[#C5B3E6] hover:text-[#0A1F1F] transition-all mb-4 backdrop-blur-sm"
-              >
-                Generate More
-              </motion.button>
-
-              <Link to="/" className="text-[9px] font-black text-[#8B9E9E]/60 uppercase tracking-[0.2em] hover:text-white transition-colors">Return to base</Link>
-            </motion.div>
-          ) : (
-            <motion.div key={currentQuestion.id} initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -50, opacity: 0 }} className="space-y-6">
-
-              {/* Question Card */}
-              <div className="bg-[#0D2626] border-4 border-[#1A3A3A] rounded-[48px] p-8 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8">
-                  <span className="bg-[#1A3A3A] text-[#C5B3E6] px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border-2 border-[#2D4E4E]">
-                    {currentQuestion.type}
-                  </span>
+            <div className="mb-6 mt-2">
+              {currentQuestion.type === 'Case Study' && currentQuestion.scenario_text ? (
+                <div className="mb-4 p-4 bg-[#F5F1ED] rounded-2xl border-2 border-dashed border-[#E5DED6]">
+                  <h4 className="text-[10px] font-black text-[#0A1F1F] uppercase mb-2">Case Scenario</h4>
+                  <p className="text-sm text-[#0A1F1F] leading-relaxed italic">
+                    {currentQuestion.scenario_text}
+                  </p>
                 </div>
+              ) : null}
+              <p className="text-base font-bold text-[#0A1F1F] leading-relaxed">
+                {currentQuestion.question_text || currentQuestion.question}
+              </p>
+            </div>
 
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="w-12 h-12 bg-[#1A3A3A] rounded-2xl flex items-center justify-center shadow-inner"><Zap className="w-6 h-6 text-[#C5B3E6]" /></div>
-                  <div>
-                    <p className="text-[10px] font-black text-[#8B9E9E] uppercase tracking-widest leading-none mb-1">{currentQuestion.subject_name}</p>
-                    <p className="text-xs font-black text-white/40">PROTOCOL ID: #{currentQuestion.id}</p>
-                  </div>
-                </div>
-
-                <h2 className="text-2xl font-black text-white leading-tight mb-10 italic">"{currentQuestion.question_text}"</h2>
-
-                {currentQuestion.options && (
-                  <div className="space-y-4">
-                    {currentQuestion.options.map((opt, i) => (
-                      <div key={i} className={`p-5 rounded-[28px] flex items-center gap-5 border-4 transition-all ${opt === currentQuestion.correct_answer ? 'bg-[#50FA7B]/5 border-[#50FA7B]/40' : 'bg-[#0A1F1F] border-[#1A3A3A]'}`}>
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${opt === currentQuestion.correct_answer ? 'bg-[#50FA7B] text-[#0A1F1F]' : 'bg-[#1A3A3A] text-[#8B9E9E]'}`}>
-                          {String.fromCharCode(65 + i)}
-                        </div>
-                        <span className={`text-base font-bold flex-1 ${opt === currentQuestion.correct_answer ? 'text-white' : 'text-[#8B9E9E]'}`}>{opt}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Taxonomy Card */}
-              <div className="bg-[#1A3A3A] rounded-[40px] p-8 border-4 border-[#2D4E4E] shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-[#8E61FF]/5 rounded-bl-[100px] pointer-events-none" />
-
-                <div className="flex items-center gap-3 mb-8 relative z-10">
-                  <Target className="w-6 h-6 text-[#C5B3E6]" />
-                  <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Taxonomy Alignment</h3>
-                </div>
-
-                <div className="space-y-8 relative z-10">
-                  <div>
-                    <p className="text-[10px] font-black text-[#8B9E9E] uppercase tracking-widest mb-4 ml-1">Course Outcome (CO)</p>
-                    <div className="relative">
-                      <select
-                        value={selectedCO}
-                        onChange={(e) => setSelectedCO(e.target.value)}
-                        className="w-full bg-[#0D2626] border-4 border-[#2D4E4E] rounded-[24px] p-6 text-white font-black text-sm outline-none focus:border-[#C5B3E6]/40 transition-all appearance-none cursor-pointer"
+            {/* MCQ Options */}
+            {((currentQuestion.type === 'MCQ' || currentQuestion.question_type === 'MCQ') || currentQuestion.options) && (
+              <div className="space-y-3 mb-6">
+                {currentQuestion.options?.map((option: any, index: any) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 + index * 0.05 }}
+                    className={`rounded-2xl p-4 border-3 ${(typeof currentQuestion.correctAnswer === 'number' ? index === currentQuestion.correctAnswer : option === currentQuestion.correct_answer || (currentQuestion.correct_answer && option && option.includes(currentQuestion.correct_answer)))
+                      ? 'bg-[#50FA7B]/20 border-[#50FA7B]'
+                      : 'bg-[#F5F1ED] border-[#E5DED6]'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm ${(typeof currentQuestion.correctAnswer === 'number' ? index === currentQuestion.correctAnswer : option === currentQuestion.correct_answer || (currentQuestion.correct_answer && option && option.includes(currentQuestion.correct_answer)))
+                          ? 'bg-[#50FA7B] text-white'
+                          : 'bg-[#E5DED6] text-[#0A1F1F]'
+                          }`}
                       >
-                        {courseOutcomes.map(co => <option key={co.id} value={co.code}>{co.code}: {co.label}</option>)}
-                      </select>
-                      <ChevronRight className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-[#8B9E9E] rotate-90" />
-                    </div>
-                  </div>
-
-                  {selectedCO && (
-                    <div className="bg-[#0A1F1F]/60 p-6 rounded-[28px] border-4 border-[#2D4E4E] flex items-center justify-between">
-                      <div>
-                        <p className="text-[10px] font-black text-[#8B9E9E] uppercase tracking-widest mb-1">Bloom Level</p>
-                        <p className="text-lg font-black text-white italic">Understanding</p>
+                        {String.fromCharCode(65 + index)}.
                       </div>
-                      <div className="w-14 h-14 bg-[#C5B3E6]/10 rounded-2xl flex items-center justify-center border-2 border-[#C5B3E6]/20">
-                        <span className="text-xl font-black text-[#C5B3E6]">0{courseOutcomes.find(c => c.code === selectedCO)?.bloom_level || 2}</span>
-                      </div>
+                      <span className="text-sm text-[#0A1F1F] flex-1">{option}</span>
+                      {(typeof currentQuestion.correctAnswer === 'number' ? index === currentQuestion.correctAnswer : option === currentQuestion.correct_answer || (currentQuestion.correct_answer && option && option.includes(currentQuestion.correct_answer))) && (
+                        <motion.div
+                          initial={{ scale: 0, rotate: -180 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ type: 'spring', delay: 0.3 }}
+                        >
+                          <CheckCircle2 className="w-5 h-5 text-[#50FA7B]" />
+                        </motion.div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </motion.div>
+                ))}
               </div>
+            )}
 
-            </motion.div>
-          )}
+            {/* Logic Keys & Explanations */}
+            {(currentQuestion.explanation || currentQuestion.logic_key) && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="mt-6 pt-6 border-t-2 border-dashed border-[#E5DED6]"
+              >
+                <div className="bg-gradient-to-br from-[#8BE9FD]/10 to-[#C5B3E6]/10 rounded-2xl p-4 border-2 border-[#8BE9FD]/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-6 h-6 bg-[#8BE9FD] rounded-lg flex items-center justify-center">
+                      <Zap className="w-3 h-3 text-[#0A1F1F]" />
+                    </div>
+                    <h4 className="text-[10px] font-black text-[#0A1F1F] uppercase tracking-wider">Logic Keys & Explanations</h4>
+                  </div>
+                  <p className="text-sm text-[#0A1F1F]/80 leading-relaxed font-medium">
+                    {currentQuestion.logic_key && (
+                      <span className="block mb-2 text-[#0A1F1F] font-bold">Key: {currentQuestion.logic_key}</span>
+                    )}
+                    {currentQuestion.explanation}
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Decision Footer */}
-      {currentQuestion && (
-        <div className="shrink-0 bg-[#0A1F1F]/80 backdrop-blur-xl p-8 pb-12 border-t-8 border-[#1A3A3A] shadow-[0_-30px_60px_rgba(0,0,0,0.6)] z-50">
-          <div className="flex gap-4 max-w-md mx-auto">
-            <motion.button
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              onClick={handleReject}
-              className="flex-1 bg-[#1A3A3A] border-4 border-red-500/20 text-red-500 rounded-[32px] py-6 font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3"
-            >
-              <X className="w-6 h-6 stroke-[3]" /> NO
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-              onClick={handleApprove}
-              className="flex-1 bg-[#C5B3E6] text-[#0A1F1F] rounded-[32px] py-6 font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-[0_20px_40px_rgba(197,179,230,0.3)]"
-            >
-              <CheckCircle2 className="w-6 h-6" /> OKAY
-            </motion.button>
-          </div>
+      {/* Course Outcome Mapping (Detailed List) */}
+      <div className="mx-6 mb-6 relative z-10">
+        <div className="flex items-center gap-2 mb-3 px-2">
+          <Target className="w-4 h-4 text-[#0A1F1F]" />
+          <h3 className="text-xs font-bold text-[#0A1F1F] uppercase">Course Outcome Mapping</h3>
         </div>
-      )}
-    </div>
+
+        <div className="bg-white rounded-[24px] overflow-hidden border-4 border-[#E5DED6] shadow-sm">
+          {courseOutcomes.map((co) => {
+            const coKey = co.code.toLowerCase(); // co1, co2...
+            const level = selectedCOLevels && (selectedCOLevels as any)[coKey];
+
+            if (!level) return null; // Show only mapped COs
+
+            return (
+              <div key={co.code} className="flex items-center justify-between p-4 border-b border-[#F5F1ED] last:border-0">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="px-2 py-1 rounded-lg text-xs font-bold border-2"
+                    style={{
+                      borderColor: co.color,
+                      color: '#0A1F1F',
+                      backgroundColor: `${co.color}20`
+                    }}
+                  >
+                    {co.code}
+                  </div>
+                  <span className="text-sm font-semibold text-[#0A1F1F]">{co.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-[#8B9E9E]">Level {level}</span>
+                </div>
+              </div>
+            );
+          })}
+          {(!selectedCOLevels || Object.values(selectedCOLevels).every(v => !v)) && (
+            <div className="p-6 text-center text-xs text-[#8B9E9E] italic">
+              No explicit CO mapping found for this question.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Actions - RED/GREEN Buttons */}
+      <div className="mx-6 mb-24 relative z-10">
+        <div className="flex gap-4">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleReject}
+            className="flex-1 bg-[#FF6AC1] text-white rounded-[24px] py-6 font-black text-lg shadow-xl border-4 border-[#FF6AC1]/50 flex flex-col items-center justify-center gap-1"
+          >
+            <X className="w-8 h-8" strokeWidth={3} />
+            <span className="text-xs opacity-80 uppercase tracking-widest">Reject</span>
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleApprove}
+            className="flex-1 bg-[#50FA7B] text-[#0A1F1F] rounded-[24px] py-6 font-black text-lg shadow-xl border-4 border-[#50FA7B]/50 flex flex-col items-center justify-center gap-1"
+          >
+            <Check className="w-8 h-8" strokeWidth={3} />
+            <span className="text-xs opacity-60 uppercase tracking-widest">Approve</span>
+          </motion.button>
+        </div>
+      </div>
+    </div >
   );
 }

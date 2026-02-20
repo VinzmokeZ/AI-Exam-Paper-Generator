@@ -1,0 +1,17 @@
+{
+  "appId": "io.vinz.aiexam",
+  "appName": "AI Exam Oracle",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "http",
+    "cleartext": true,
+    "allowNavigation": [
+      "*"
+    ]
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

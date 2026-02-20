@@ -1,6 +1,7 @@
 """
 Rubric service - Business logic for rubric operations
 """
+from typing import List, Dict
 from sqlalchemy.orm import Session
 from ..models import Rubric, RubricQuestionDistribution, RubricLODistribution
 
@@ -30,16 +31,16 @@ def validate_rubric(rubric_data: dict) -> str | None:
             return f"Invalid learning outcome: {lo['learning_outcome']}. Must be one of {valid_los}"
     
     # Validate question types
-    valid_types = {"MCQ", "Short", "Essay"}
+    valid_types = {"MCQ", "Short", "Essay", "Case Study"}
     for qd in question_distributions:
         if qd["question_type"] not in valid_types:
             return f"Invalid question type: {qd['question_type']}. Must be one of {valid_types}"
     
     return None
 
-def build_generation_prompt(rubric: Rubric, subject_name: str, topic_names: list[str], db: Session) -> str:
+def build_generation_prompt(rubric: Rubric, subject_name: str, topic_names: List[str], db: Session, context: List[str] = None) -> str:
     """
-    Build structured LLM prompt from rubric constraints
+    Builds the main prompt for AI generation based on rubric
     """
     # Get question distributions
     question_dists = db.query(RubricQuestionDistribution).filter(
@@ -51,10 +52,19 @@ def build_generation_prompt(rubric: Rubric, subject_name: str, topic_names: list
         RubricLODistribution.rubric_id == rubric.id
     ).all()
     
+    context_str = "\n".join(context) if context else "Use general academic knowledge for the specified subject."
+    
     # Build prompt
-    prompt = f"""You are an expert question generator for academic exams.
+    prompt = f"""
+Role: Senior Academic Expert & Exam Creator.
+Task: Create professional-grade exam questions based on the provided RUBRIC and STUDY CONTEXT.
 
-**Exam Details:**
+STUDY CONTEXT (Use this to ground the questions):
+---
+{context_str}
+---
+
+**Exam Metadata:**
 - Subject: {subject_name}
 - Topics: {', '.join(topic_names)}
 - Exam Type: {rubric.exam_type}
@@ -99,9 +109,10 @@ Generate questions in the following JSON format:
 2. For MCQ: Provide 4 options (A-D) with one correct answer
 3. For Short: Provide question text and expected key points in explanation
 4. For Essay: Provide broad question and evaluation criteria in explanation
-5. Bloom levels: Remember, Understand, Apply, Analyze, Evaluate, Create
-6. Match question difficulty to exam type ({rubric.exam_type})
-7. Ensure questions cover all specified topics proportionally
+5. For Case Study: Provide a scenario followed by related sub-questions and comprehensive answers
+6. Bloom levels: Remember, Understand, Apply, Analyze, Evaluate, Create
+7. Match question difficulty to exam type ({rubric.exam_type})
+8. Ensure questions cover all specified topics proportionally
 
 Generate exactly the requested number of questions for each type.
 """

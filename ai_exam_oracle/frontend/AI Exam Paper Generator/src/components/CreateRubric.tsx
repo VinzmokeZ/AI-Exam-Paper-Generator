@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Save, X, Target, BookOpen, AlertTriangle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { rubricService, RubricCreate } from '../services/rubricService';
-import { subjectService } from '../services/api';
+import { subjectService, api, connectionLogs, discoverConnectivity } from '../services/api';
 import { Modal } from './Modal';
 import { ChevronDown } from 'lucide-react';
 
@@ -16,36 +16,56 @@ export function CreateRubric() {
   const [rubricName, setRubricName] = useState('');
   const [duration, setDuration] = useState(180); // minutes
   const [selectedSubject, setSelectedSubject] = useState('');
-  const [subjects, setSubjects] = useState<any[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [isBackendOnline, setIsBackendOnline] = useState(false);
+  const [activeModel, setActiveModel] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+
+
+  const [subjects, setSubjects] = useState<any[]>([]);
 
   // Load subjects on mount
   useEffect(() => {
-    const loadSubjects = async () => {
-      try {
-        const data = await subjectService.getAll();
-
-        // Merge logic: Combine DEFAULT_SUBJECTS with backend subjects
-        const { DEFAULT_SUBJECTS } = await import('../constants/defaultData');
-        const backendCodes = new Set(data.map((s: any) => s.code.toUpperCase()));
-        const uniqueDefaults = DEFAULT_SUBJECTS.filter(d => !backendCodes.has(d.code.toUpperCase()));
-        const combined = [...uniqueDefaults, ...data];
-
-        setSubjects(combined);
-        if (combined.length > 0) {
-          setSelectedSubjectId(combined[0].id);
-          setSelectedSubject(combined[0].name);
-        }
-      } catch (err) {
-        console.error('Failed to load subjects:', err);
-        const { DEFAULT_SUBJECTS } = await import('../constants/defaultData');
-        setSubjects(DEFAULT_SUBJECTS);
-        setSelectedSubjectId(DEFAULT_SUBJECTS[0].id);
-        setSelectedSubject(DEFAULT_SUBJECTS[0].name);
-      }
-    };
     loadSubjects();
+    checkConnection();
   }, []);
+
+  const checkConnection = async () => {
+    try {
+      await discoverConnectivity();
+      const response = await api.get('/health');
+      setIsBackendOnline(true);
+      if (response.data.ollama === 'online' && response.data.models?.length > 0) {
+        setActiveModel(response.data.models[0]);
+      }
+    } catch {
+      setIsBackendOnline(false);
+    }
+  };
+
+  const loadSubjects = async () => {
+    try {
+      const data = await subjectService.getAll();
+
+      // Merge logic: Combine DEFAULT_SUBJECTS with backend subjects
+      const { DEFAULT_SUBJECTS } = await import('../constants/defaultData');
+      const backendCodes = new Set(data.map((s: any) => s.code.toUpperCase()));
+      const uniqueDefaults = DEFAULT_SUBJECTS.filter(d => !backendCodes.has(d.code.toUpperCase()));
+      const combined = [...uniqueDefaults, ...data];
+
+      setSubjects(combined);
+      if (combined.length > 0) {
+        setSelectedSubjectId(Number(combined[0].id));
+        setSelectedSubject(combined[0].name);
+      }
+    } catch (err) {
+      console.error('Failed to load subjects:', err);
+      const { DEFAULT_SUBJECTS } = await import('../constants/defaultData');
+      setSubjects(DEFAULT_SUBJECTS);
+      setSelectedSubjectId(Number(DEFAULT_SUBJECTS[0].id));
+      setSelectedSubject(DEFAULT_SUBJECTS[0].name);
+    }
+  };
 
   // MAP 1: Question Types Distribution
   const [mcqCount, setMcqCount] = useState(10);
@@ -130,6 +150,11 @@ export function CreateRubric() {
             question_type: 'Essay' as 'Essay',
             count: essayCount,
             marks_each: essayMarks
+          },
+          {
+            question_type: 'Case Study' as 'Case Study',
+            count: caseStudyCount,
+            marks_each: caseStudyMarks
           }
         ].filter(qd => qd.count > 0),
         lo_distributions: [
@@ -186,8 +211,45 @@ export function CreateRubric() {
             </Link>
             <div className="flex-1">
               <h1 className="text-xl font-bold text-[#F5F1ED]">Create Rubric</h1>
-              <p className="text-xs text-[#8B9E9E] font-medium">Design your exam template</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] font-bold text-[#8B9E9E] uppercase tracking-widest">Parallel Engine</p>
+                <div className={`w-1.5 h-1.5 rounded-full ${isBackendOnline ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-white/20'}`} />
+                <span className="text-[8px] font-bold text-white/40 uppercase tracking-tighter">
+                  {isBackendOnline ? (activeModel || 'Link Active') : 'Link Dormant'}
+                </span>
+                <button
+                  onClick={() => setShowDebug(!showDebug)}
+                  className="ml-2 px-2 py-0.5 rounded-full bg-white/5 text-[7px] text-white/30 hover:bg-white/10 border border-white/5 transition-colors"
+                >
+                  ENGINE STATUS
+                </button>
+              </div>
             </div>
+
+            {/* Debug Console Overlay */}
+            {showDebug && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="absolute top-20 left-6 right-6 z-50 p-3 bg-black/90 rounded-xl border border-white/10 font-mono text-[10px] text-green-400 overflow-hidden shadow-2xl"
+              >
+                <div className="flex justify-between items-center mb-2 text-white/40 uppercase tracking-widest text-[8px]">
+                  <span>Discovery Logs</span>
+                  <button onClick={() => checkConnection()} className="text-blue-400 font-bold">Retry Probes</button>
+                </div>
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {connectionLogs.map((log: string, i: number) => (
+                    <div key={i} className={log.includes('✅') ? 'text-green-400' : log.includes('❌') ? 'text-red-400' : ''}>
+                      {log}
+                    </div>
+                  ))}
+                  {connectionLogs.length === 0 && (
+                    <div className="text-white/20 italic">Initializing Signal Hunter...</div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}

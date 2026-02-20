@@ -15,3 +15,8 @@ IMPORTANT COMMANDS
 4. LOCAL DEVELOPMENT
    Command: npm run dev
    Description: Starts the local development server for testing.
+
+5. LIVE TUNNEL (FOR LIVE SITE)
+   File: START_TUNNEL.bat
+   Description: Run this file to connect your live Firebase site to your local backend/Ollama.
+   Note: Keep the window open while using the live site!
