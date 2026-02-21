@@ -40,6 +40,12 @@ export function Dashboard() {
   const [prompt, setPrompt] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
 
+  // Search Features
+  const [dashboardSearchQuery, setDashboardSearchQuery] = useState('');
+  const [allSubjects, setAllSubjects] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<{ subjects: any[] }>({ subjects: [] });
+  const [isSearching, setIsSearching] = useState(false);
+
   const toggleEngine = () => {
     const newMode = engineMode === 'local' ? 'cloud' : 'local';
     setEngineMode(newMode);
@@ -55,22 +61,25 @@ export function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const statsData = await dashboardService.getStats();
+        const [statsData, activityData, notifications, subjectsData] = await Promise.all([
+          dashboardService.getStats(),
+          dashboardService.getActivity(),
+          notificationService.getAll(),
+          import('../services/api').then(m => m.subjectService.getAll())
+        ]);
+
         setStats(statsData);
-        // Initialize edit username only if not already set or if explicitly different
+        setAllSubjects(subjectsData);
         if (statsData?.username) {
           setEditUsername(statsData.username);
         }
-
-        const activityData = await dashboardService.getActivity();
         setActivities(activityData);
-
-        const notifications = await notificationService.getAll();
         setUnreadCount(notifications.filter((n: any) => n.unread).length);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       }
     };
+
     const checkConnection = async () => {
       try {
         await dashboardService.getStats();
@@ -79,6 +88,7 @@ export function Dashboard() {
         setIsBackendOnline(false);
       }
     };
+
     fetchData();
     checkConnection();
   }, []);
@@ -141,6 +151,21 @@ export function Dashboard() {
   const currentStreak = stats?.streak || 0;
   const todayProgress = stats?.approvalRate || 0;
 
+  // Search Logic
+  useEffect(() => {
+    if (dashboardSearchQuery.trim().length > 1) {
+      const filtered = allSubjects.filter(s =>
+        s.name.toLowerCase().includes(dashboardSearchQuery.toLowerCase()) ||
+        s.code.toLowerCase().includes(dashboardSearchQuery.toLowerCase())
+      );
+      setSearchResults({ subjects: filtered.slice(0, 5) });
+      setIsSearching(true);
+    } else {
+      setSearchResults({ subjects: [] });
+      setIsSearching(false);
+    }
+  }, [dashboardSearchQuery, allSubjects]);
+
   // Recent Activity
   const recentActivities = activities.length > 0 ? activities : [
     { action: 'Getting ready...', subject: 'System', time: 'Now', color: '#8BE9FD' }
@@ -155,26 +180,89 @@ export function Dashboard() {
       <div className="absolute bottom-20 right-20 w-28 h-28 bg-[#FF6AC1]/10 rounded-full blur-3xl float-slow" />
 
       {/* Global Search Bar */}
-      <div className="mx-6 mt-4 mb-4 relative z-10">
+      <div className="mx-6 mt-4 mb-4 relative z-50">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#0D2626] rounded-2xl px-4 py-3 border-2 border-[#0A1F1F] flex items-center gap-3"
+          className="bg-[#0D2626] rounded-2xl px-4 py-3 border-2 border-[#0A1F1F] flex items-center gap-3 shadow-xl"
         >
           <Search className="w-5 h-5 text-[#8B9E9E]" />
           <input
             type="text"
-            placeholder="Search subjects, questions, exams..."
+            placeholder="Search subjects, codes..."
+            value={dashboardSearchQuery}
+            onChange={(e) => setDashboardSearchQuery(e.target.value)}
+            onFocus={() => dashboardSearchQuery.length > 1 && setIsSearching(true)}
             className="flex-1 bg-transparent text-[#F5F1ED] placeholder:text-[#8B9E9E] text-sm outline-none"
           />
+          <AnimatePresence>
+            {dashboardSearchQuery && (
+              <motion.button
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0 }}
+                onClick={() => setDashboardSearchQuery('')}
+                className="p-1 hover:bg-white/10 rounded-full"
+              >
+                <X className="w-4 h-4 text-[#8B9E9E]" />
+              </motion.button>
+            )}
+          </AnimatePresence>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
+            onClick={() => navigate('/subjects')}
             className="w-8 h-8 bg-[#C5B3E6]/20 rounded-lg flex items-center justify-center"
           >
             <Filter className="w-4 h-4 text-[#C5B3E6]" />
           </motion.button>
         </motion.div>
+
+        {/* Search Results Dropdown */}
+        <AnimatePresence>
+          {isSearching && (searchResults.subjects.length > 0) && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsSearching(false)}
+                className="fixed inset-0 z-40"
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute top-full left-0 right-0 mt-2 bg-[#0D2626] border-2 border-[#0A1F1F] rounded-2xl p-2 z-50 shadow-2xl max-h-80 overflow-y-auto"
+              >
+                <div className="px-3 py-2 text-[10px] font-black text-[#8B9E9E] uppercase tracking-widest border-b border-white/5 mb-1">
+                  Matching Subjects
+                </div>
+                {searchResults.subjects.map((subject) => (
+                  <motion.button
+                    key={subject.id}
+                    whileHover={{ x: 5, backgroundColor: 'rgba(255,255,255,0.05)' }}
+                    onClick={() => {
+                      navigate(`/subjects/${subject.id}`);
+                      setIsSearching(false);
+                      setDashboardSearchQuery('');
+                    }}
+                    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left"
+                  >
+                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${subject.gradient} flex items-center justify-center border border-white/20`}>
+                      <span className="text-xs font-bold text-[#0A1F1F]">{subject.code.slice(0, 2).toUpperCase()}</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-[#F5F1ED] leading-tight">{subject.name}</p>
+                      <p className="text-[10px] text-[#8B9E9E] uppercase font-bold tracking-tighter">{subject.code}</p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[#8B9E9E] ml-auto" />
+                  </motion.button>
+                ))}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
       </div>
 
 

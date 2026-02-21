@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   ArrowLeft, BarChart3, FileText, CheckCircle2, XCircle, Clock,
   TrendingUp, Target, Brain, BookOpen, Users, Download, ChevronDown,
-  ChevronUp, AlertTriangle, Sparkles, Loader2, Trash2, Eye
+  ChevronUp, AlertTriangle, Sparkles, Loader2, Trash2, Eye, Search, X
 } from 'lucide-react';
 import { dashboardService, historyService, subjectService } from '../services/api';
 import { toast } from 'sonner';
@@ -27,6 +27,7 @@ export function Reports() {
   const [isLoading, setIsLoading] = useState(true);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [viewingPaper, setViewingPaper] = useState<any | null>(null);
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -360,64 +361,93 @@ export function Reports() {
                 className="overflow-hidden"
               >
                 <div className="px-5 pb-5 space-y-3">
-                  {paperHistory.length === 0 ? (
+                  {/* History Search Bar */}
+                  <div className="bg-white/40 backdrop-blur-sm rounded-2xl px-4 py-2 flex items-center gap-3 border-2 border-white/40 mb-2">
+                    <Search className="w-4 h-4 text-[#0A1F1F]/60" />
+                    <input
+                      type="text"
+                      placeholder="Search history..."
+                      value={historySearchQuery}
+                      onChange={(e) => setHistorySearchQuery(e.target.value)}
+                      className="flex-1 bg-transparent border-none outline-none text-[#0A1F1F] placeholder:text-[#0A1F1F]/40 text-xs font-bold"
+                    />
+                    {historySearchQuery && (
+                      <button onClick={() => setHistorySearchQuery('')}>
+                        <X className="w-4 h-4 text-[#0A1F1F]/40" />
+                      </button>
+                    )}
+                  </div>
+
+                  {paperHistory
+                    .filter(paper =>
+                      historySearchQuery === '' ||
+                      (paper.topic_name || paper.name || '').toLowerCase().includes(historySearchQuery.toLowerCase()) ||
+                      (paper.subject_name || paper.subject || '').toLowerCase().includes(historySearchQuery.toLowerCase())
+                    )
+                    .length === 0 ? (
                     <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-6 text-center text-[#0A1F1F]/60 text-sm">
-                      No generated papers found.
+                      {historySearchQuery ? 'No matching papers found.' : 'No generated papers found.'}
                     </div>
                   ) : (
-                    paperHistory.map((paper: any, index: number) => (
-                      <motion.div
-                        key={paper.id || index}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 + index * 0.05 }}
-                        className="bg-white/40 backdrop-blur-sm rounded-2xl p-4 border-2 border-white/40 group overflow-hidden relative"
-                      >
-                        <div className="flex items-center justify-between relative z-10">
-                          <div className="flex-1">
-                            <h3 className="font-black text-[#0A1F1F] text-sm mb-1">{paper.topic_name || paper.name || `Exam ${paper.id}`}</h3>
-                            <p className="text-[10px] text-[#0A1F1F] opacity-60 font-bold uppercase">
-                              {paper.subject_name || paper.subject || 'Subject'} • {paper.questions_count || paper.question_count || paper.qs || 0} QS • {paper.marks || paper.total_marks || 0} MARKS
-                            </p>
-                            <p className="text-[9px] text-[#0A1F1F] opacity-40 font-medium">Generated on {paper.created_at ? new Date(paper.created_at).toLocaleDateString() : (paper.date || 'Unknown Date')}</p>
+                    paperHistory
+                      .filter(paper =>
+                        historySearchQuery === '' ||
+                        (paper.topic_name || paper.name || '').toLowerCase().includes(historySearchQuery.toLowerCase()) ||
+                        (paper.subject_name || paper.subject || '').toLowerCase().includes(historySearchQuery.toLowerCase())
+                      )
+                      .map((paper: any, index: number) => (
+                        <motion.div
+                          key={paper.id || index}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1 + index * 0.05 }}
+                          className="bg-white/40 backdrop-blur-sm rounded-2xl p-4 border-2 border-white/40 group overflow-hidden relative"
+                        >
+                          <div className="flex items-center justify-between relative z-10">
+                            <div className="flex-1">
+                              <h3 className="font-black text-[#0A1F1F] text-sm mb-1">{paper.topic_name || paper.name || `Exam ${paper.id}`}</h3>
+                              <p className="text-[10px] text-[#0A1F1F] opacity-60 font-bold uppercase">
+                                {paper.subject_name || paper.subject || 'Subject'} • {paper.questions_count || paper.question_count || paper.qs || 0} QS • {paper.marks || paper.total_marks || 0} MARKS
+                              </p>
+                              <p className="text-[9px] text-[#0A1F1F] opacity-40 font-medium">Generated on {paper.created_at ? new Date(paper.created_at).toLocaleDateString() : (paper.date || 'Unknown Date')}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => {
+                                  handlePhysicalDownload(paper);
+                                  setViewingPaper(paper);
+                                  // Small delay to allow render before printing
+                                  setTimeout(() => window.print(), 1000);
+                                }}
+                                className="w-8 h-8 bg-[#50FA7B]/20 rounded-lg flex items-center justify-center"
+                                title="Download PDF"
+                              >
+                                <Download className="w-4 h-4 text-[#50FA7B]" />
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setViewingPaper(paper)}
+                                className="w-8 h-8 bg-[#8BE9FD]/20 rounded-lg flex items-center justify-center"
+                                title="View"
+                              >
+                                <Eye className="w-4 h-4 text-[#8BE9FD]" />
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => handleDeleteHistory(paper.id)}
+                                className="w-8 h-8 bg-[#FF6AC1]/20 rounded-lg flex items-center justify-center"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4 text-[#FF6AC1]" />
+                              </motion.button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => {
-                                handlePhysicalDownload(paper);
-                                setViewingPaper(paper);
-                                // Small delay to allow render before printing
-                                setTimeout(() => window.print(), 1000);
-                              }}
-                              className="w-8 h-8 bg-[#50FA7B]/20 rounded-lg flex items-center justify-center"
-                              title="Download PDF"
-                            >
-                              <Download className="w-4 h-4 text-[#50FA7B]" />
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => setViewingPaper(paper)}
-                              className="w-8 h-8 bg-[#8BE9FD]/20 rounded-lg flex items-center justify-center"
-                              title="View"
-                            >
-                              <Eye className="w-4 h-4 text-[#8BE9FD]" />
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => handleDeleteHistory(paper.id)}
-                              className="w-8 h-8 bg-[#FF6AC1]/20 rounded-lg flex items-center justify-center"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4 text-[#FF6AC1]" />
-                            </motion.button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))
+                        </motion.div>
+                      ))
                   )}
                 </div>
               </motion.div>

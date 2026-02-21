@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, ChevronRight, FileStack, ArrowLeft, Sparkles, X, Palette, Check, Loader2, Trash2 } from 'lucide-react';
+import { Search, Plus, ChevronRight, FileStack, ArrowLeft, Sparkles, X, Palette, Check, Loader2, Trash2, Filter } from 'lucide-react';
 import { subjectService, Subject, api, connectionLogs } from '../services/api';
 import { Modal } from './Modal';
 import { toast } from 'sonner';
@@ -32,6 +32,8 @@ export function SubjectLibrary() {
   const [selectedColor, setSelectedColor] = useState('#C5B3E6');
   const [selectedGradient, setSelectedGradient] = useState('from-[#C5B3E6] to-[#9B86C5]');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sortOption, setSortOption] = useState<'name' | 'code' | 'questions' | 'newest'>('name');
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   useEffect(() => {
     loadSubjects();
@@ -135,11 +137,21 @@ export function SubjectLibrary() {
     setSelectedGradient('from-[#C5B3E6] to-[#9B86C5]');
   };
 
-  const filteredSubjects = subjects.filter(
-    (subject) =>
-      subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      subject.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredSubjects = subjects
+    .filter(
+      (subject) =>
+        subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        subject.code.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (sortOption) {
+        case 'name': return a.name.localeCompare(b.name);
+        case 'code': return a.code.localeCompare(b.code);
+        case 'questions': return (b.questions || 0) - (a.questions || 0);
+        case 'newest': return (b.id && a.id && typeof b.id === 'number' && typeof a.id === 'number') ? b.id - a.id : 0;
+        default: return 0;
+      }
+    });
 
   return (
     <div className="min-h-full pb-32">
@@ -279,15 +291,69 @@ export function SubjectLibrary() {
             </motion.button>
           </div>
 
-          <div className="bg-[#0A1F1F] rounded-2xl px-4 py-3 flex items-center gap-3 border-2 border-white/5">
-            <Search className="w-5 h-5 text-[#8B9E9E]" />
-            <input
-              type="text"
-              placeholder="Search subjects..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent border-none outline-none text-[#F5F1ED] placeholder:text-[#8B9E9E] text-sm font-medium"
-            />
+          <div className="flex items-center gap-2 mt-4">
+            <div className="flex-1 bg-[#0A1F1F] rounded-2xl px-4 py-3 flex items-center gap-3 border-2 border-white/5 relative">
+              <Search className="w-5 h-5 text-[#8B9E9E]" />
+              <input
+                type="text"
+                placeholder="Search subjects..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none text-[#F5F1ED] placeholder:text-[#8B9E9E] text-sm font-medium"
+              />
+            </div>
+
+            <div className="relative">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setShowSortMenu(!showSortMenu)}
+                className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-all ${showSortMenu ? 'bg-[#C5B3E6] border-[#C5B3E6] text-[#0A1F1F]' : 'bg-[#0A1F1F] border-white/10 text-[#8B9E9E]'}`}
+              >
+                <Filter className="w-5 h-5" />
+              </motion.button>
+
+              <AnimatePresence>
+                {showSortMenu && (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setShowSortMenu(false)}
+                      className="fixed inset-0 z-40"
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                      className="absolute top-full right-0 mt-2 w-48 bg-[#0D2626] border-2 border-[#0A1F1F] rounded-2xl p-2 z-50 shadow-2xl"
+                    >
+                      <div className="px-3 py-2 text-[8px] font-black text-[#8B9E9E] uppercase tracking-widest border-b border-white/5 mb-1">Sort By</div>
+                      {[
+                        { id: 'name', label: 'Alphabetical (A-Z)', icon: Palette },
+                        { id: 'code', label: 'Subject Code', icon: FileStack },
+                        { id: 'questions', label: 'Question Count', icon: Sparkles },
+                        { id: 'newest', label: 'Recently Added', icon: Plus },
+                      ].map((opt) => (
+                        <button
+                          key={opt.id}
+                          onClick={() => {
+                            setSortOption(opt.id as any);
+                            setShowSortMenu(false);
+                          }}
+                          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${sortOption === opt.id ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'text-[#F5F1ED] hover:bg-white/5'}`}
+                        >
+                          <opt.icon className="w-4 h-4" />
+                          <span className="text-xs font-bold">{opt.label}</span>
+                          {sortOption === opt.id && <Check className="w-3 h-3 ml-auto" strokeWidth={4} />}
+                        </button>
+                      ))}
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </motion.div>
       </div>
@@ -329,79 +395,81 @@ export function SubjectLibrary() {
           </div>
         ) : (
           filteredSubjects.map((subject, index) => (
-            <Link key={subject.id} to={`/subjects/${subject.id}`}>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -5 }}
-                whileTap={{ scale: 0.98 }}
-                className={`bg-gradient-to-br ${subject.gradient} rounded-[32px] p-6 border-4 border-white/20 relative overflow-hidden shadow-xl`}
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-[128px] pointer-events-none" />
+            <motion.div key={subject.id} layout>
+              <Link to={`/subjects/${subject.id}`}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  whileHover={{ y: -5 }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`bg-gradient-to-br ${subject.gradient} rounded-[32px] p-6 border-4 border-white/20 relative overflow-hidden shadow-xl`}
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-[128px] pointer-events-none" />
 
-                <div className="flex items-center gap-5 relative z-10">
-                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center border-4 border-white/40 flex-shrink-0 bg-white/10 backdrop-blur-md shadow-inner">
-                    <span className="text-xl font-bold text-[#0A1F1F]">{subject.code.slice(0, 2).toUpperCase()}</span>
-                  </div>
-
-                  <div className="flex-1 min-w-0 pr-4">
-                    <h3 className="text-[#0A1F1F] font-bold text-lg mb-1 leading-tight truncate">
-                      {subject.name}
-                    </h3>
-                    <p className="text-[10px] text-[#0A1F1F] opacity-60 font-bold uppercase tracking-widest">
-                      {subject.code} • {subject.chapters || 0} Chapters
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="flex flex-col items-end gap-1">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-black text-[#0A1F1F]">{subject.questions || 0}</span>
-                        <span className="text-[10px] text-[#0A1F1F] opacity-40 font-bold uppercase">QA</span>
-                      </div>
-                      <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                        <ChevronRight className="w-5 h-5 text-[#0A1F1F]" />
-                      </div>
+                  <div className="flex items-center gap-5 relative z-10">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center border-4 border-white/40 flex-shrink-0 bg-white/10 backdrop-blur-md shadow-inner">
+                      <span className="text-xl font-bold text-[#0A1F1F]">{subject.code.slice(0, 2).toUpperCase()}</span>
                     </div>
 
-                    <div className="flex flex-col gap-2 border-l border-white/10 pl-2 ml-1">
-                      {/* Check if ID is a large default ID (e.g. 301, 101) or small sequential DB ID */}
-                      {(typeof subject.id === 'number' && subject.id > 100) ? (
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveToDB(subject); }}
-                          className="w-8 h-8 bg-[#0A1F1F]/20 rounded-lg flex items-center justify-center text-[#0A1F1F] border border-white/20"
-                          title="Save to database to edit/delete"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </motion.button>
-                      ) : (
-                        <>
+                    <div className="flex-1 min-w-0 pr-4">
+                      <h3 className="text-[#0A1F1F] font-bold text-lg mb-1 leading-tight truncate">
+                        {subject.name}
+                      </h3>
+                      <p className="text-[10px] text-[#0A1F1F] opacity-60 font-bold uppercase tracking-widest">
+                        {subject.code} • {subject.chapters || 0} Chapters
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-2xl font-black text-[#0A1F1F]">{subject.questions || 0}</span>
+                          <span className="text-[10px] text-[#0A1F1F] opacity-40 font-bold uppercase">QA</span>
+                        </div>
+                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+                          <ChevronRight className="w-5 h-5 text-[#0A1F1F]" />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 border-l border-white/10 pl-2 ml-1">
+                        {/* Check if ID is a large default ID (e.g. 301, 101) or small sequential DB ID */}
+                        {(typeof subject.id === 'number' && subject.id > 100) ? (
                           <motion.button
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/subjects/${subject.id}`); }}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveToDB(subject); }}
                             className="w-8 h-8 bg-[#0A1F1F]/20 rounded-lg flex items-center justify-center text-[#0A1F1F] border border-white/20"
+                            title="Save to database to edit/delete"
                           >
-                            <Palette className="w-4 h-4" />
+                            <Plus className="w-4 h-4" />
                           </motion.button>
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteSubject(subject.id, subject.name); }}
-                            className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center text-red-600 border border-red-500/20"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </motion.button>
-                        </>
-                      )}
+                        ) : (
+                          <>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/subjects/${subject.id}`); }}
+                              className="w-8 h-8 bg-[#0A1F1F]/20 rounded-lg flex items-center justify-center text-[#0A1F1F] border border-white/20"
+                            >
+                              <Palette className="w-4 h-4" />
+                            </motion.button>
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteSubject(subject.id, subject.name); }}
+                              className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center text-red-600 border border-red-500/20"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </motion.button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            </Link>
+                </motion.div>
+              </Link>
+            </motion.div>
           ))
         )}
       </div>
