@@ -248,8 +248,8 @@ export function VettingCenter() {
               </Link>
               <div>
                 <h1 className="text-xl font-bold text-[#0A1F1F]">Vetting</h1>
-                <p className="text-xs text-[#0A1F1F] opacity-70 font-medium">
-                  Step {currentIndex + 1} of {totalQuestions}
+                <p className="text-[10px] text-[#0A1F1F] opacity-70 font-bold uppercase tracking-widest truncate max-w-[150px]">
+                  {state?.topicName || currentQuestion.topic_name || (currentIndex + 1 + ' of ' + totalQuestions)}
                 </p>
               </div>
             </div>
@@ -294,6 +294,16 @@ export function VettingCenter() {
             transition={{ duration: 0.3 }}
             className="bg-white rounded-[32px] p-6 border-4 border-[#E5DED6] relative overflow-hidden"
           >
+            {/* Source Material Badge */}
+            {(currentQuestion.topic_name?.startsWith('File:') || state?.topicName?.startsWith('File:')) && (
+              <div className="absolute top-0 left-0 bg-[#C5B3E6] px-4 py-1 rounded-br-2xl flex items-center gap-1.5 shadow-sm">
+                <FileText className="w-3 h-3 text-[#0A1F1F]" />
+                <span className="text-[9px] font-black text-[#0A1F1F] uppercase tracking-wider">
+                  Source: {(currentQuestion.topic_name || state?.topicName || '').replace('File: ', '')}
+                </span>
+              </div>
+            )}
+
             {/* Short Notes Badge - New Addition */}
             {(currentQuestion.type === 'Short' || currentQuestion.question_type === 'Short') && (
               <div className="absolute top-0 right-0 bg-[#FFB86C] px-4 py-1 rounded-bl-2xl font-bold text-[10px] text-[#0A1F1F] uppercase tracking-wider">

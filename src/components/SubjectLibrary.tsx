@@ -42,10 +42,20 @@ export function SubjectLibrary() {
   const [genCount, setGenCount] = useState(5);
   const [genComplexity, setGenComplexity] = useState('Balanced');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [indexedFilesMap, setIndexedFilesMap] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     loadSubjects();
     checkConnection();
+    // Load indexed files from local storage
+    const stored = localStorage.getItem('indexed_files_registry');
+    if (stored) {
+      try {
+        setIndexedFilesMap(JSON.parse(stored));
+      } catch (e) {
+        console.error("Failed to parse indexed files registry:", e);
+      }
+    }
   }, []);
 
   const [isBackendOnline, setIsBackendOnline] = useState(false);
@@ -155,6 +165,15 @@ export function SubjectLibrary() {
         engine,
         selectedSubjectForGen.id.toString()
       );
+
+      // Update indexed files registry
+      const currentFiles = indexedFilesMap[selectedSubjectForGen.id.toString()] || [];
+      if (!currentFiles.includes(genFile.name)) {
+        const updatedFiles = [...currentFiles, genFile.name];
+        const newMap = { ...indexedFilesMap, [selectedSubjectForGen.id.toString()]: updatedFiles };
+        setIndexedFilesMap(newMap);
+        localStorage.setItem('indexed_files_registry', JSON.stringify(newMap));
+      }
 
       toast.success(`Successfully generated ${results.length || 0} questions!`, { id: toastId });
       setShowGenerateModal(false);
@@ -266,11 +285,11 @@ export function SubjectLibrary() {
       <div className="fixed bottom-40 right-10 w-40 h-40 bg-[#6FEDD6]/10 rounded-full blur-3xl float-slow float-delay-1 pointer-events-none" />
 
       {/* Header */}
-      <div className="mx-6 mt-4 mb-6 relative z-10">
+      <div className="mx-6 pt-16 mb-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-[#0D2626] to-[#0A1F1F] rounded-[32px] p-6 border-4 border-[#0A1F1F] relative overflow-hidden shadow-2xl"
+          className="bg-gradient-to-br from-[#0D2626] to-[#0A1F1F] rounded-[40px] p-8 border-4 border-[#0A1F1F] relative shadow-2xl overflow-visible"
         >
           <div className="flex items-center gap-3 mb-4">
             <Link to="/">
@@ -400,12 +419,12 @@ export function SubjectLibrary() {
       </div>
 
       {/* Stats Overview */}
-      <div className="mx-6 mb-8 relative z-10">
+      <div className="mx-6 mb-12 relative z-10">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-[#F5F1ED] to-[#E5DED6] rounded-[32px] p-6 border-4 border-[#E5DED6] shadow-lg"
+          className="bg-gradient-to-br from-[#F5F1ED] to-[#E5DED6] rounded-[40px] p-8 border-4 border-[#E5DED6] shadow-lg"
         >
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
@@ -428,7 +447,7 @@ export function SubjectLibrary() {
         </motion.div>
       </div>
 
-      <div className="px-6 pb-6 space-y-4 relative z-10">
+      <div className="px-6 pb-6 space-y-6 relative z-10">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="w-12 h-12 text-[#C5B3E6] animate-spin mb-4" />
@@ -444,7 +463,7 @@ export function SubjectLibrary() {
                   transition={{ delay: index * 0.05 }}
                   whileHover={{ y: -5 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`bg-gradient-to-br ${subject.gradient} rounded-[32px] p-6 border-4 border-white/20 relative overflow-hidden shadow-xl`}
+                  className={`bg-gradient-to-br ${subject.gradient} rounded-[40px] p-8 border-4 border-white/20 relative overflow-hidden shadow-xl`}
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-[128px] pointer-events-none" />
 
@@ -535,9 +554,10 @@ export function SubjectLibrary() {
         title="Smart AI Generate"
         subtitle={`Analyzing ${selectedSubjectForGen?.name}`}
       >
-        <div className="space-y-4">
-          <div className="bg-white p-5 rounded-[28px] border-2 border-[#E5DED6] relative overflow-hidden group">
-            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none">Upload Source Material (PDF/Docx)</label>
+        <div className="space-y-6 max-h-[70vh] overflow-y-auto px-1">
+          {/* File Upload */}
+          <div className="bg-white p-6 rounded-[32px] border-2 border-[#E5DED6] relative overflow-hidden group">
+            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-4 block tracking-widest leading-none">Upload Source Material (PDF/Docx)</label>
             <input
               type="file"
               onChange={(e) => setGenFile(e.target.files?.[0] || null)}
@@ -545,44 +565,72 @@ export function SubjectLibrary() {
               className="absolute inset-0 opacity-0 cursor-pointer z-10"
               disabled={isGenerating}
             />
-            <div className="flex items-center gap-3 p-4 bg-[#F5F1ED] rounded-xl border-2 border-dashed border-[#E5DED6] group-hover:border-[#C5B3E6] transition-colors">
-              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                {genFile ? <Check className="w-5 h-5 text-green-500" /> : <Plus className="w-5 h-5 text-[#8B9E9E]" />}
+            <div className="flex flex-col items-center justify-center gap-4 p-8 bg-[#F5F1ED] rounded-[24px] border-2 border-dashed border-[#E5DED6] group-hover:border-[#C5B3E6] transition-all min-h-[140px]">
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md">
+                {genFile ? <Check className="w-7 h-7 text-green-500 animate-bounce" /> : <Plus className="w-7 h-7 text-[#C5B3E6]" strokeWidth={3} />}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-[#0A1F1F] truncate">
+              <div className="text-center">
+                <p className="text-sm font-black text-[#0A1F1F]">
                   {genFile ? genFile.name : "Tap to select file"}
                 </p>
-                <p className="text-[10px] text-[#8B9E9E] font-bold uppercase tracking-tighter">
+                <p className="text-[10px] text-[#8B9E9E] font-bold uppercase tracking-tighter mt-1">
                   {genFile ? `${(genFile.size / 1024 / 1024).toFixed(2)} MB • Ready` : "PDF, DOCX, or Text up to 50MB"}
                 </p>
               </div>
               {genFile && (
                 <button
                   onClick={(e) => { e.stopPropagation(); setGenFile(null); }}
-                  className="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-red-500"
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 hover:bg-red-100 transition-colors shadow-sm"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-5 h-5" />
                 </button>
               )}
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white p-4 rounded-[28px] border-2 border-[#E5DED6]">
-              <label className="text-[9px] font-bold text-[#8B9E9E] uppercase mb-2 block tracking-widest leading-none text-center">Questions</label>
-              <div className="flex items-center justify-between pointer-events-auto">
-                <button onClick={() => setGenCount(Math.max(1, genCount - 1))} className="w-8 h-8 rounded-lg bg-[#F5F1ED] text-[#0A1F1F] font-black">-</button>
-                <span className="text-xl font-black text-[#0A1F1F]">{genCount}</span>
-                <button onClick={() => setGenCount(Math.min(20, genCount + 1))} className="w-8 h-8 rounded-lg bg-[#F5F1ED] text-[#0A1F1F] font-black">+</button>
+          {/* Indexed Files Management */}
+          {selectedSubjectForGen && indexedFilesMap[selectedSubjectForGen.id.toString()]?.length > 0 && (
+            <div className="bg-white/50 p-6 rounded-[32px] border-2 border-[#E5DED6]/50">
+              <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none">Previously Indexed Files</label>
+              <div className="space-y-2">
+                {indexedFilesMap[selectedSubjectForGen.id.toString()].map((fileName, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[11px] font-bold text-[#0A1F1F]/70 bg-white/40 p-2 rounded-xl">
+                    <Check className="w-3 h-3 text-cyan-500" />
+                    <span className="truncate flex-1">{fileName}</span>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="bg-white p-4 rounded-[28px] border-2 border-[#E5DED6]">
-              <label className="text-[9px] font-bold text-[#8B9E9E] uppercase mb-2 block tracking-widest leading-none text-center">Complexity</label>
+          )}
+
+          {/* Count and Complexity */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Question Count */}
+            <div className="bg-white p-5 rounded-[32px] border-2 border-[#E5DED6]">
+              <label className="text-[9px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none text-center">Questions</label>
+              <div className="flex items-center justify-between pointer-events-auto px-2">
+                <button
+                  onClick={() => setGenCount(Math.max(1, genCount - 1))}
+                  className="w-10 h-10 rounded-xl bg-[#F5F1ED] text-[#0A1F1F] font-black hover:bg-[#E5DED6] transition-colors"
+                >
+                  -
+                </button>
+                <span className="text-2xl font-black text-[#0A1F1F]">{genCount}</span>
+                <button
+                  onClick={() => setGenCount(Math.min(20, genCount + 1))}
+                  className="w-10 h-10 rounded-xl bg-[#F5F1ED] text-[#0A1F1F] font-black hover:bg-[#E5DED6] transition-colors"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            {/* Complexity */}
+            <div className="bg-white p-5 rounded-[32px] border-2 border-[#E5DED6]">
+              <label className="text-[9px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none text-center">Complexity</label>
               <select
                 value={genComplexity}
                 onChange={(e) => setGenComplexity(e.target.value)}
-                className="w-full bg-[#F5F1ED] rounded-lg px-2 py-1.5 text-xs font-bold text-[#0A1F1F] outline-none border-none"
+                className="w-full bg-[#F5F1ED] rounded-xl px-4 py-3 text-sm font-bold text-[#0A1F1F] outline-none border-none appearance-none text-center cursor-pointer hover:bg-[#E5DED6] transition-colors"
               >
                 <option>Balanced</option>
                 <option>Recall</option>
@@ -592,17 +640,18 @@ export function SubjectLibrary() {
             </div>
           </div>
 
+          {/* Submit Button */}
           <button
             onClick={handleSmartGenerateSubmit}
             disabled={isGenerating || !genFile}
-            className="w-full bg-[#0A1F1F] text-white rounded-[28px] py-5 font-bold uppercase tracking-[0.2em] text-xs shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-2 overflow-hidden relative"
+            className="w-full bg-[#0A1F1F] text-white rounded-[32px] py-6 font-bold uppercase tracking-[0.2em] text-xs shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-4 overflow-hidden relative"
           >
             {isGenerating ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-5 h-5 animate-spin text-[#C5B3E6]" />
                 <span>AI Processing...</span>
                 <motion.div
-                  className="absolute bottom-0 left-0 h-1 bg-[#C5B3E6]"
+                  className="absolute bottom-0 left-0 h-1.5 bg-[#C5B3E6]"
                   initial={{ width: "0%" }}
                   animate={{ width: "100%" }}
                   transition={{ duration: 30 }}
@@ -610,13 +659,13 @@ export function SubjectLibrary() {
               </>
             ) : (
               <>
-                <Sparkles className="w-4 h-4 text-[#C5B3E6]" strokeWidth={3} />
+                <Sparkles className="w-5 h-5 text-[#C5B3E6]" strokeWidth={3} />
                 <span>Begin Brainstorming</span>
               </>
             )}
           </button>
 
-          <p className="text-[9px] text-center text-[#8B9E9E] font-bold uppercase tracking-tight opacity-60">
+          <p className="text-[9px] text-center text-[#8B9E9E] font-bold uppercase tracking-tight opacity-60 pb-2">
             Powered by Cloud AI • Context Window: 128k Tokens
           </p>
         </div>
