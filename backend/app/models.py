@@ -47,16 +47,11 @@ class Question(Base):
     id = Column(Integer, primary_key=True, index=True)
     topic_id = Column(Integer, ForeignKey("topics.id"))
     rubric_id = Column(Integer, ForeignKey("rubrics.id"), nullable=True)
-    question_text = Column(String(2000))
+    question_text = Column(String(5000))
     question_type = Column(String(50))  # MCQ, Short, Essay
     options = Column(JSON, nullable=True)
-    correct_answer = Column(String(1000))
-    explanation = Column(String(2000), nullable=True)
-    marks = Column(Integer)
-    bloom_level = Column(String(50), nullable=True)
-    course_outcome = Column(String(50), nullable=True)
-    learning_outcome = Column(String(50), nullable=True)  # LO1, LO2, LO3, LO4, LO5
-    course_outcomes = Column(JSON, nullable=True) # Granular levels {co1: 1, co2: 3...}
+    correct_answer = Column(String(2000))
+    explanation = Column(String(5000), nullable=True)
     status = Column(String(50), default="draft")  # draft, approved, rejected
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -107,10 +102,6 @@ class UserStats(Base):
     level = Column(Integer, default=1)
     coins = Column(Integer, default=0)
     badges = Column(JSON, default=[])
-    streak = Column(Integer, default=0)
-    longest_streak = Column(Integer, default=0)
-    total_days_active = Column(Integer, default=0)
-    last_activity = Column(DateTime, nullable=True)
 
 class ExamHistory(Base):
     __tablename__ = "exam_history"

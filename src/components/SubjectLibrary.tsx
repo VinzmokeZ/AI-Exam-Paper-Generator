@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Search, Plus, ChevronRight, FileStack, ArrowLeft, Sparkles, X, Palette, Check, Loader2, Trash2, Filter } from 'lucide-react';
@@ -36,6 +36,7 @@ export function SubjectLibrary() {
   const [showSortMenu, setShowSortMenu] = useState(false);
 
   // Generation Modal State
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [selectedSubjectForGen, setSelectedSubjectForGen] = useState<Subject | null>(null);
   const [genFile, setGenFile] = useState<File | null>(null);
@@ -177,7 +178,7 @@ export function SubjectLibrary() {
 
       toast.success(`Successfully generated ${results.length || 0} questions!`, { id: toastId });
       setShowGenerateModal(false);
-      setGenFile(null);
+      // Removed setGenFile(null) so it stays for the next run if needed
 
       // Navigate to Vetting Center to review
       navigate('/vetting');
@@ -285,11 +286,11 @@ export function SubjectLibrary() {
       <div className="fixed bottom-40 right-10 w-40 h-40 bg-[#6FEDD6]/10 rounded-full blur-3xl float-slow float-delay-1 pointer-events-none" />
 
       {/* Header */}
-      <div className="mx-6 pt-16 mb-8 relative z-10">
+      <div className="mx-6 mt-4 mb-8 relative z-50">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-gradient-to-br from-[#0D2626] to-[#0A1F1F] rounded-[40px] p-8 border-4 border-[#0A1F1F] relative shadow-2xl overflow-visible"
+          className="bg-gradient-to-br from-[#0D2626] to-[#0A1F1F] rounded-[32px] p-6 border-4 border-[#0A1F1F] relative shadow-2xl overflow-visible"
         >
           <div className="flex items-center gap-3 mb-4">
             <Link to="/">
@@ -351,80 +352,79 @@ export function SubjectLibrary() {
             </motion.button>
           </div>
 
-          <div className="flex items-center gap-2 mt-4">
-            <div className="flex-1 bg-[#0A1F1F] rounded-2xl px-4 py-3 flex items-center gap-3 border-2 border-white/5 relative">
+          <div className="mt-4 relative z-50">
+            <div className="w-full bg-[#0A1F1F] rounded-2xl px-4 py-3 flex items-center gap-3 border-2 border-white/5 relative">
               <Search className="w-5 h-5 text-[#8B9E9E]" />
               <input
                 type="text"
                 placeholder="Search subjects..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-[#F5F1ED] placeholder:text-[#8B9E9E] text-sm font-medium"
+                className="flex-1 min-w-0 bg-transparent border-none outline-none text-[#F5F1ED] placeholder:text-[#8B9E9E] text-sm font-medium"
               />
-            </div>
+              <div className="relative border-l border-white/10 pl-3">
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowSortMenu(!showSortMenu)}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showSortMenu ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'bg-white/5 text-[#8B9E9E] hover:text-[#F5F1ED]'}`}
+                >
+                  <Filter className="w-5 h-5" />
+                </motion.button>
 
-            <div className="relative">
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setShowSortMenu(!showSortMenu)}
-                className={`w-12 h-12 rounded-xl flex items-center justify-center border-2 transition-all ${showSortMenu ? 'bg-[#C5B3E6] border-[#C5B3E6] text-[#0A1F1F]' : 'bg-[#0A1F1F] border-white/10 text-[#8B9E9E]'}`}
-              >
-                <Filter className="w-5 h-5" />
-              </motion.button>
-
-              <AnimatePresence>
-                {showSortMenu && (
-                  <>
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      onClick={() => setShowSortMenu(false)}
-                      className="fixed inset-0 z-40"
-                    />
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                      className="absolute top-full right-0 mt-2 w-48 bg-[#0D2626] border-2 border-[#0A1F1F] rounded-2xl p-2 z-50 shadow-2xl"
-                    >
-                      <div className="px-3 py-2 text-[8px] font-black text-[#8B9E9E] uppercase tracking-widest border-b border-white/5 mb-1">Sort By</div>
-                      {[
-                        { id: 'name', label: 'Alphabetical (A-Z)', icon: Palette },
-                        { id: 'code', label: 'Subject Code', icon: FileStack },
-                        { id: 'questions', label: 'Question Count', icon: Sparkles },
-                        { id: 'newest', label: 'Recently Added', icon: Plus },
-                      ].map((opt) => (
-                        <button
-                          key={opt.id}
-                          onClick={() => {
-                            setSortOption(opt.id as any);
-                            setShowSortMenu(false);
-                          }}
-                          className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${sortOption === opt.id ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'text-[#F5F1ED] hover:bg-white/5'}`}
-                        >
-                          <opt.icon className="w-4 h-4" />
-                          <span className="text-xs font-bold">{opt.label}</span>
-                          {sortOption === opt.id && <Check className="w-3 h-3 ml-auto" strokeWidth={4} />}
-                        </button>
-                      ))}
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
+                <AnimatePresence>
+                  {showSortMenu && (
+                    <>
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setShowSortMenu(false)}
+                        className="fixed inset-0 z-40"
+                      />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                        className="absolute top-12 right-0 mt-2 w-48 bg-[#0D2626] border-2 border-[#0A1F1F] rounded-2xl p-2 z-50 shadow-2xl"
+                      >
+                        <div className="px-3 py-2 text-[8px] font-black text-[#8B9E9E] uppercase tracking-widest border-b border-white/5 mb-1">Sort By</div>
+                        {[
+                          { id: 'name', label: 'Alphabetical (A-Z)', icon: Palette },
+                          { id: 'code', label: 'Subject Code', icon: FileStack },
+                          { id: 'questions', label: 'Question Count', icon: Sparkles },
+                          { id: 'newest', label: 'Recently Added', icon: Plus },
+                        ].map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => {
+                              setSortOption(opt.id as any);
+                              setShowSortMenu(false);
+                            }}
+                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${sortOption === opt.id ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'text-[#F5F1ED] hover:bg-white/5'}`}
+                          >
+                            <opt.icon className="w-4 h-4" />
+                            <span className="text-xs font-bold">{opt.label}</span>
+                            {sortOption === opt.id && <Check className="w-3 h-3 ml-auto" strokeWidth={4} />}
+                          </button>
+                        ))}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         </motion.div>
       </div>
 
       {/* Stats Overview */}
-      <div className="mx-6 mb-12 relative z-10">
+      <div className="mx-6 mb-8 relative z-10">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
-          className="bg-gradient-to-br from-[#F5F1ED] to-[#E5DED6] rounded-[40px] p-8 border-4 border-[#E5DED6] shadow-lg"
+          className="bg-gradient-to-br from-[#F5F1ED] to-[#E5DED6] rounded-[32px] p-6 border-4 border-[#E5DED6] shadow-lg"
         >
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
@@ -447,7 +447,7 @@ export function SubjectLibrary() {
         </motion.div>
       </div>
 
-      <div className="px-6 pb-6 space-y-6 relative z-10">
+      <div className="px-6 pb-6 space-y-4 relative z-10">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="w-12 h-12 text-[#C5B3E6] animate-spin mb-4" />
@@ -463,7 +463,7 @@ export function SubjectLibrary() {
                   transition={{ delay: index * 0.05 }}
                   whileHover={{ y: -5 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`bg-gradient-to-br ${subject.gradient} rounded-[40px] p-8 border-4 border-white/20 relative overflow-hidden shadow-xl`}
+                  className={`bg-gradient-to-br ${subject.gradient} rounded-[32px] p-6 border-4 border-white/20 relative overflow-hidden shadow-xl`}
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-[128px] pointer-events-none" />
 
@@ -560,27 +560,31 @@ export function SubjectLibrary() {
             <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-4 block tracking-widest leading-none">Upload Source Material (PDF/Docx)</label>
             <input
               type="file"
+              ref={fileInputRef}
               onChange={(e) => setGenFile(e.target.files?.[0] || null)}
               accept=".pdf,.docx,.txt"
-              className="absolute inset-0 opacity-0 cursor-pointer z-10"
+              className="hidden"
               disabled={isGenerating}
             />
-            <div className="flex flex-col items-center justify-center gap-4 p-8 bg-[#F5F1ED] rounded-[24px] border-2 border-dashed border-[#E5DED6] group-hover:border-[#C5B3E6] transition-all min-h-[140px]">
-              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-md">
-                {genFile ? <Check className="w-7 h-7 text-green-500 animate-bounce" /> : <Plus className="w-7 h-7 text-[#C5B3E6]" strokeWidth={3} />}
+            <div
+              onClick={() => !isGenerating && fileInputRef.current?.click()}
+              className="flex flex-col items-center justify-center gap-3 p-6 bg-[#F5F1ED] rounded-[24px] border-2 border-dashed border-[#E5DED6] group-hover:border-[#C5B3E6] hover:bg-[#E5DED6]/20 transition-all min-h-[140px] text-center cursor-pointer relative"
+            >
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-1 pointer-events-none">
+                {genFile ? <Check className="w-6 h-6 text-green-500 animate-bounce" /> : <Plus className="w-6 h-6 text-[#C5B3E6]" strokeWidth={3} />}
               </div>
-              <div className="text-center">
-                <p className="text-sm font-black text-[#0A1F1F]">
+              <div className="w-full px-2 overflow-hidden pointer-events-none">
+                <p className="text-sm font-black text-[#0A1F1F] truncate break-words">
                   {genFile ? genFile.name : "Tap to select file"}
                 </p>
-                <p className="text-[10px] text-[#8B9E9E] font-bold uppercase tracking-tighter mt-1">
+                <p className="text-[10px] text-[#8B9E9E] font-bold uppercase tracking-tighter mt-0.5">
                   {genFile ? `${(genFile.size / 1024 / 1024).toFixed(2)} MB • Ready` : "PDF, DOCX, or Text up to 50MB"}
                 </p>
               </div>
               {genFile && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); setGenFile(null); }}
-                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 hover:bg-red-100 transition-colors shadow-sm"
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setGenFile(null); }}
+                  className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors shadow-md z-20 border border-[#E5DED6]/50"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -590,13 +594,13 @@ export function SubjectLibrary() {
 
           {/* Indexed Files Management */}
           {selectedSubjectForGen && indexedFilesMap[selectedSubjectForGen.id.toString()]?.length > 0 && (
-            <div className="bg-white/50 p-6 rounded-[32px] border-2 border-[#E5DED6]/50">
-              <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none">Previously Indexed Files</label>
-              <div className="space-y-2">
+            <div className="bg-white/50 p-4 rounded-[24px] border-2 border-[#E5DED6]/50">
+              <label className="text-[9px] font-bold text-[#8B9E9E] uppercase mb-2 block tracking-widest leading-none">Previously Indexed</label>
+              <div className="flex flex-wrap gap-2">
                 {indexedFilesMap[selectedSubjectForGen.id.toString()].map((fileName, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[11px] font-bold text-[#0A1F1F]/70 bg-white/40 p-2 rounded-xl">
-                    <Check className="w-3 h-3 text-cyan-500" />
-                    <span className="truncate flex-1">{fileName}</span>
+                  <div key={i} className="flex items-center gap-1.5 text-[9px] font-bold text-[#0A1F1F]/60 bg-white/60 px-2.5 py-1.5 rounded-lg border border-[#E5DED6]/40">
+                    <Check className="w-2.5 h-2.5 text-cyan-500" />
+                    <span className="truncate max-w-[100px]">{fileName}</span>
                   </div>
                 ))}
               </div>
@@ -651,10 +655,10 @@ export function SubjectLibrary() {
                 <Loader2 className="w-5 h-5 animate-spin text-[#C5B3E6]" />
                 <span>AI Processing...</span>
                 <motion.div
-                  className="absolute bottom-0 left-0 h-1.5 bg-[#C5B3E6]"
+                  className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#C5B3E6] to-[#8BE9FD]"
                   initial={{ width: "0%" }}
-                  animate={{ width: "100%" }}
-                  transition={{ duration: 30 }}
+                  animate={{ width: "95%" }}
+                  transition={{ duration: 25, ease: "linear" }}
                 />
               </>
             ) : (

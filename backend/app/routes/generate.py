@@ -69,9 +69,6 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
                     options=q_data.get('options', []),
                     correct_answer=str(q_data.get('correct_answer', '')), # Ensure string
                     explanation=q_data.get('explanation', ''),
-                    marks=q_data.get('marks', 5),
-                    bloom_level=str(b_level),
-                    course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes'),
                     status="draft"
                 )
                 db.add(new_q)
@@ -93,7 +90,7 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
                 topic_name=request.topic_name,
                 exam_type="AI Generation",
                 questions_count=len(stored_questions),
-                marks=sum(q.marks for q in stored_questions),
+                marks=sum(q.get('marks', 5) for q in generated_data),
                 duration=60, # Default
                 questions=[q.question_text for q in stored_questions] # Store just text or full dict? Model says JSON.
             )
@@ -248,9 +245,6 @@ async def generate_from_file(
                 options=q_data.get('options', []),
                 correct_answer=str(q_data.get('correct_answer', '')),
                 explanation=q_data.get('explanation', ''),
-                marks=q_data.get('marks', 5),
-                bloom_level=str(b_level),
-                course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes'),
                 status="draft"
             )
             db.add(new_q)

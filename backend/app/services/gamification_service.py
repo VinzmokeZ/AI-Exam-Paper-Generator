@@ -6,7 +6,7 @@ class GamificationService:
     def get_user_stats(self, db: Session, user_id: int):
         stats = db.query(UserStats).filter(UserStats.user_id == user_id).first()
         if not stats:
-            stats = UserStats(user_id=user_id, username="Professor Vinz", xp=0, level=1, streak=0, last_activity=None)
+            stats = UserStats(user_id=user_id, username="Professor Vinz", xp=0, level=1)
             db.add(stats)
             db.commit()
             db.refresh(stats)
@@ -20,28 +20,8 @@ class GamificationService:
         next_level_xp = stats.level * 1000
         if stats.xp >= next_level_xp:
             stats.level += 1
-            stats.coins += 50 # Reward coins on level up
-            
-        # Streak Logic
-        now = datetime.utcnow()
-        if stats.last_activity:
-            delta = now - stats.last_activity
-            if delta.days == 1:
-                stats.streak += 1
-                stats.total_days_active += 1
-            elif delta.days > 1:
-                stats.streak = 1
-                stats.total_days_active += 1
-            # If same day, don't increment streak or total_days_active
-        else:
-            stats.streak = 1
-            stats.total_days_active = 1
-            
-        # Update longest streak
-        if stats.streak > stats.longest_streak:
-            stats.longest_streak = stats.streak
-
-        stats.last_activity = now
+        # Removed streak logic to match reverted schema
+        
         db.commit()
         db.refresh(stats)
         return stats
