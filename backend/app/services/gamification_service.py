@@ -28,11 +28,19 @@ class GamificationService:
             delta = now - stats.last_activity
             if delta.days == 1:
                 stats.streak += 1
+                stats.total_days_active += 1
             elif delta.days > 1:
                 stats.streak = 1
+                stats.total_days_active += 1
+            # If same day, don't increment streak or total_days_active
         else:
             stats.streak = 1
+            stats.total_days_active = 1
             
+        # Update longest streak
+        if stats.streak > stats.longest_streak:
+            stats.longest_streak = stats.streak
+
         stats.last_activity = now
         db.commit()
         db.refresh(stats)

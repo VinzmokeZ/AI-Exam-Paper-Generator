@@ -1,17 +1,8 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Flame, Calendar, TrendingUp, Award, CheckCircle2 } from 'lucide-react';
-
-const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const currentWeek = [
-  { day: 'Mon', active: true, count: 12 },
-  { day: 'Tue', active: true, count: 8 },
-  { day: 'Wed', active: true, count: 15 },
-  { day: 'Thu', active: true, count: 10 },
-  { day: 'Fri', active: true, count: 14 },
-  { day: 'Sat', active: false, count: 0 },
-  { day: 'Sun', active: false, count: 0 },
-];
+import { ArrowLeft, Flame, Calendar, TrendingUp, Award, CheckCircle2, Loader2 } from 'lucide-react';
+import { dashboardService } from '../services/api';
 
 const streakMilestones = [
   { days: 7, label: 'Week Warrior', unlocked: true, color: '#8BE9FD' },
@@ -30,9 +21,36 @@ const activityHistory = [
 ];
 
 export function Streak() {
-  const currentStreak = 45;
-  const longestStreak = 52;
-  const totalDays = 180;
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await dashboardService.getStats();
+        setStats(data);
+      } catch (err) {
+        console.error("Failed to fetch streak stats");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <Loader2 className="w-10 h-10 text-[#FFB86C] animate-spin mb-4" />
+        <p className="text-[#8B9E9E] font-bold text-sm">Syncing your stats...</p>
+      </div>
+    );
+  }
+
+  const currentStreak = stats?.streak ?? 0;
+  const longestStreak = stats?.longestStreak ?? 0;
+  const totalDays = stats?.totalDaysActive ?? 0;
+  const currentWeek = stats?.activityWeek ?? [];
 
   return (
     <div className="min-h-full pb-6">
@@ -136,26 +154,26 @@ export function Streak() {
             <h2 className="text-base font-bold text-[#F5F1ED]">This Week</h2>
           </div>
 
-          <div className="grid grid-cols-7 gap-2">
-            {currentWeek.map((day, index) => (
+          <div className="grid grid-cols-7 gap-1.5">
+            {currentWeek.map((day: any, index: number) => (
               <motion.div
                 key={day.day}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.3 + index * 0.05 }}
-                className={`rounded-xl p-3 text-center ${day.active
-                    ? 'bg-gradient-to-br from-[#FFB86C] to-[#FF6AC1]'
-                    : 'bg-[#0A1F1F] border-2 border-[#0D3D3D]'
+                className={`rounded-xl p-2 text-center ${day.active
+                  ? 'bg-gradient-to-br from-[#FFB86C] to-[#FF6AC1]'
+                  : 'bg-[#0A1F1F] border-2 border-[#0D3D3D]'
                   }`}
               >
-                <p className={`text-[10px] font-bold mb-1 ${day.active ? 'text-[#0A1F1F]' : 'text-[#8B9E9E]'}`}>
+                <p className={`text-[9px] font-bold mb-1 ${day.active ? 'text-[#0A1F1F]' : 'text-[#8B9E9E]'}`}>
                   {day.day}
                 </p>
                 {day.active && (
                   <motion.p
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
-                    className="text-lg font-bold text-[#0A1F1F]"
+                    className="text-base font-bold text-[#0A1F1F]"
                   >
                     {day.count}
                   </motion.p>
@@ -187,8 +205,8 @@ export function Streak() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.35 + index * 0.05 }}
                 className={`rounded-2xl p-4 border-3 ${milestone.unlocked
-                    ? 'bg-[#0D3D3D] border-[#0A1F1F]'
-                    : 'bg-[#0A1F1F] border-[#0D3D3D] opacity-60'
+                  ? 'bg-[#0D3D3D] border-[#0A1F1F]'
+                  : 'bg-[#0A1F1F] border-[#0D3D3D] opacity-60'
                   }`}
               >
                 <div className="flex items-center justify-between">
@@ -249,10 +267,10 @@ export function Streak() {
                   </div>
                   <div
                     className={`w-2 h-2 rounded-full ${item.type === 'generate'
-                        ? 'bg-[#8BE9FD]'
-                        : item.type === 'vetting'
-                          ? 'bg-[#C5B3E6]'
-                          : 'bg-[#FFB86C]'
+                      ? 'bg-[#8BE9FD]'
+                      : item.type === 'vetting'
+                        ? 'bg-[#C5B3E6]'
+                        : 'bg-[#FFB86C]'
                       }`}
                   />
                 </div>

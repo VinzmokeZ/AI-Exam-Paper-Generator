@@ -22,10 +22,24 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     rejected_count = db.query(Question).filter(Question.status == "rejected").count()
     total_q = db.query(Question).count()
     
-    # 4. Count Exams This Week
-    one_week_ago = datetime.utcnow() - timedelta(days=7)
-    exams_this_week = db.query(ExamHistory).filter(ExamHistory.created_at >= one_week_ago).count()
+    # 4. Activity this week (last 7 days)
+    activity_week = []
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    today_idx = datetime.utcnow().weekday() # 0 is Monday
     
+    for i in range(7):
+        target_date = datetime.utcnow().date() - timedelta(days=(today_idx - i) % 7)
+        if (today_idx - i) % 7 > today_idx: # Date is from previous week
+             target_date = datetime.utcnow().date() - timedelta(days=(today_idx - i) % 7 + 7)
+        
+        # Count questions created on this specific day
+        count = db.query(Question).filter(func.date(Question.created_at) == target_date).count()
+        activity_week.append({
+            "day": days[i],
+            "active": count > 0,
+            "count": count
+        })
+
     # 5. Overall Performance
     performance = int((approved_count / total_q * 100)) if total_q > 0 else 0
 
@@ -34,15 +48,17 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         "xp": user_stats.xp,
         "level": user_stats.level,
         "streak": user_stats.streak,
+        "longestStreak": user_stats.longest_streak,
+        "totalDaysActive": user_stats.total_days_active,
         "coins": user_stats.coins,
         "subjectCount": subject_count,
         "pendingVetting": pending_count,
         "approvedQuestions": approved_count,
         "rejectedQuestions": rejected_count,
         "totalQuestions": total_q,
-        "examsThisWeek": exams_this_week,
         "performance": performance,
-        "approvalRate": performance
+        "approvalRate": performance,
+        "activityWeek": activity_week
     }
 
 @router.get("/reports")
@@ -57,12 +73,12 @@ def get_report_data(db: Session = Depends(get_db)):
     lo_stats = []
     for lo in ["LO1", "LO2", "LO3", "LO4", "LO5"]:
         count = db.query(Question).filter(Question.learning_outcome == lo).count()
-        total = 200 # Placeholder target
+        target = 50 # Adjusted target for demo
         lo_stats.append({
             "code": lo,
             "current": count,
-            "total": total,
-            "percentage": int((count / total * 100)) if total > 0 else 0
+            "target": target,
+            "percent": int((count / target * 100)) if target > 0 else 0
         })
         
     # Bloom's Distribution
@@ -73,7 +89,7 @@ def get_report_data(db: Session = Depends(get_db)):
         bloom_stats.append({
             "level": level,
             "count": count,
-            "percentage": int((count / total_q * 100)) if total_q > 0 else 0
+            "percent": int((count / total_q * 100)) if total_q > 0 else 0
         })
 
     return {

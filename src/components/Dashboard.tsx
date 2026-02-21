@@ -406,6 +406,7 @@ export function Dashboard() {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/reports')}
                 className="px-3 py-2 bg-gradient-to-r from-[#C5B3E6] to-[#8BE9FD] rounded-xl text-[#0A1F1F] text-[10px] font-bold flex items-center gap-1.5 flex-shrink-0 leading-none"
               >
                 <TrendingUp className="w-3.5 h-3.5" />

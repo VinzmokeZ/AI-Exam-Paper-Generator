@@ -1,58 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronDown, ChevronUp, Download, BarChart3, Target, BookOpen, Users, AlertTriangle, CheckCircle, FileText, TrendingUp } from 'lucide-react';
-
-const overviewStats = [
-  { label: 'Questions Generated', value: '1,020', icon: FileText },
-  { label: 'Questions Approved', value: '892', icon: CheckCircle },
-  { label: 'Questions Rejected', value: '78', icon: AlertTriangle },
-  { label: 'Pending Review', value: '50', icon: BookOpen },
-];
-
-const learningOutcomes = [
-  { code: 'LO1', label: 'Understand fundamentals', current: 245, target: 250, percent: 98 },
-  { code: 'LO2', label: 'Apply knowledge', current: 198, target: 200, percent: 99 },
-  { code: 'LO3', label: 'Analyze problems', current: 156, target: 180, percent: 87 },
-  { code: 'LO4', label: 'Design solutions', current: 89, target: 120, percent: 74 },
-  { code: 'LO5', label: 'Evaluate approaches', current: 62, target: 100, percent: 62 },
-];
-
-const bloomsData = [
-  { level: 'Knowledge', count: 285, percent: 28 },
-  { level: 'Comprehension', count: 220, percent: 22 },
-  { level: 'Application', count: 195, percent: 19 },
-  { level: 'Analysis', count: 165, percent: 16 },
-  { level: 'Synthesis', count: 95, percent: 9 },
-  { level: 'Evaluation', count: 60, percent: 6 },
-];
-
-const topicCoverage = [
-  { name: 'Introduction to Algorithms', questions: 120, percent: 95, status: 'good' },
-  { name: 'Sorting & Searching', questions: 98, percent: 88, status: 'good' },
-  { name: 'Data Structures', questions: 85, percent: 75, status: 'warning' },
-  { name: 'Graph Algorithms', questions: 45, percent: 62, status: 'warning' },
-  { name: 'Dynamic Programming', questions: 32, percent: 45, status: 'alert' },
-  { name: 'Hashing', questions: 70, percent: 80, status: 'good' },
-];
-
-const reviewers = [
-  { name: 'Dr. Smith', reviewed: 245, approved: 220, rejected: 25, rate: 90 },
-  { name: 'Prof. Johnson', reviewed: 198, approved: 172, rejected: 26, rate: 87 },
-  { name: 'Dr. Williams', reviewed: 156, approved: 145, rejected: 11, rate: 93 },
-  { name: 'Prof. Brown', reviewed: 134, approved: 118, rejected: 16, rate: 88 },
-];
-
-const subjectQuestions = [
-  { name: 'Computer Science (CS301)', generated: 380, vetted: 420, total: 450 },
-  { name: 'Physics (PHY201)', generated: 280, vetted: 300, total: 320 },
-  { name: 'Mathematics (MAT101)', generated: 210, vetted: 230, total: 250 },
-];
+import { ChevronDown, ChevronUp, Download, BarChart3, Target, BookOpen, Users, AlertTriangle, CheckCircle, FileText, TrendingUp, Loader2 } from 'lucide-react';
+import { dashboardService } from '../services/api';
 
 type Section = 'overview' | 'outcomes' | 'blooms' | 'coverage' | 'reviewers' | 'subjects';
 
 export function Analytics() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [expandedSections, setExpandedSections] = useState<Set<Section>>(new Set(['overview']));
   const [selectedSubject, setSelectedSubject] = useState('all');
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const reportData = await dashboardService.getReports();
+        setData(reportData);
+      } catch (err) {
+        console.error("Failed to fetch analytics reports");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
 
   const toggleSection = (section: Section) => {
     const newSections = new Set(expandedSections);
@@ -63,6 +34,46 @@ export function Analytics() {
     }
     setExpandedSections(newSections);
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <Loader2 className="w-10 h-10 text-[#4A4A4A] animate-spin mb-4" />
+        <p className="text-[#999999] font-bold text-sm">Generating Performance Reports...</p>
+      </div>
+    );
+  }
+
+  // Map backend data to local structure
+  const overviewStats = [
+    { label: 'Questions Generated', value: data?.overview?.generated?.toLocaleString() || '0', icon: FileText },
+    { label: 'Questions Approved', value: data?.overview?.approved?.toLocaleString() || '0', icon: CheckCircle },
+    { label: 'Questions Rejected', value: data?.overview?.rejected?.toLocaleString() || '0', icon: AlertTriangle },
+    { label: 'Pending Review', value: data?.overview?.pending?.toLocaleString() || '0', icon: BookOpen },
+  ];
+
+  const learningOutcomes = data?.learningOutcomes || [];
+  const bloomsData = data?.blooms || [];
+
+  // Keep some mock data for sections not yet fully implemented in backend
+  const topicCoverage = [
+    { name: 'Introduction to Algorithms', questions: 120, percent: 95, status: 'good' },
+    { name: 'Sorting & Searching', questions: 98, percent: 88, status: 'good' },
+    { name: 'Data Structures', questions: 85, percent: 75, status: 'warning' },
+    { name: 'Graph Algorithms', questions: 45, percent: 62, status: 'warning' },
+    { name: 'Dynamic Programming', questions: 32, percent: 45, status: 'alert' },
+  ];
+
+  const reviewers = [
+    { name: 'Dr. Smith', reviewed: 245, approved: 220, rejected: 25, rate: 90 },
+    { name: 'Prof. Johnson', reviewed: 198, approved: 172, rejected: 26, rate: 87 },
+  ];
+
+  const subjectQuestions = [
+    { name: 'Computer Science (CS301)', generated: 380, vetted: 420, total: 450 },
+  ];
+
+  const approvalRate = data?.overview?.approvalRate || 0;
 
   return (
     <div className="min-h-full bg-[#F5F5F5]">
@@ -155,7 +166,7 @@ export function Analytics() {
           </div>
 
           <div className="space-y-3">
-            {learningOutcomes.map((lo, index) => (
+            {learningOutcomes.map((lo: any, index: number) => (
               <motion.div
                 key={lo.code}
                 initial={{ opacity: 0, x: -10 }}
@@ -194,7 +205,7 @@ export function Analytics() {
             ))}
           </div>
 
-          {learningOutcomes.some(lo => lo.percent < 70) && (
+          {learningOutcomes.some((lo: any) => lo.percent < 70) && (
             <div className="mt-3 bg-[#FFF8E1] border-2 border-[#FFB74D] rounded-lg p-3">
               <div className="flex gap-2">
                 <AlertTriangle className="w-4 h-4 text-[#F57C00] flex-shrink-0 mt-0.5" />
@@ -220,7 +231,7 @@ export function Analytics() {
 
           <div className="mb-4">
             <div className="flex items-end justify-between gap-2 h-32 mb-2">
-              {bloomsData.map((item, index) => (
+              {bloomsData.map((item: any, index: number) => (
                 <div key={item.level} className="flex-1 flex flex-col items-center">
                   <div className="w-full flex flex-col justify-end" style={{ height: '100%' }}>
                     <div className="text-xs font-bold text-[#333333] mb-1 text-center">
@@ -242,7 +253,7 @@ export function Analytics() {
           </div>
 
           <div className="space-y-2">
-            {bloomsData.map((item, index) => (
+            {bloomsData.map((item: any, index: number) => (
               <div key={item.level} className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-[#666666] rounded-sm" />
@@ -299,10 +310,9 @@ export function Analytics() {
                     initial={{ width: 0 }}
                     animate={{ width: `${topic.percent}%` }}
                     transition={{ duration: 1, delay: 0.2 + index * 0.05 }}
-                    className={`h-full rounded-full ${
-                      topic.status === 'good' ? 'bg-[#666666]' :
+                    className={`h-full rounded-full ${topic.status === 'good' ? 'bg-[#666666]' :
                       topic.status === 'warning' ? 'bg-[#999999]' : 'bg-[#CCCCCC]'
-                    }`}
+                      }`}
                   />
                 </div>
               </motion.div>

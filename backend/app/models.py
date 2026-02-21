@@ -107,6 +107,8 @@ class UserStats(Base):
     coins = Column(Integer, default=0)
     badges = Column(JSON, default=[])
     streak = Column(Integer, default=0)
+    longest_streak = Column(Integer, default=0)
+    total_days_active = Column(Integer, default=0)
     last_activity = Column(DateTime, nullable=True)
 
 class ExamHistory(Base):
