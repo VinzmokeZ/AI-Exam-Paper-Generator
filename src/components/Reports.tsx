@@ -404,14 +404,18 @@ export function Reports() {
                           className="bg-white/40 backdrop-blur-sm rounded-2xl p-4 border-2 border-white/40 group overflow-hidden relative"
                         >
                           <div className="flex items-center justify-between relative z-10">
-                            <div className="flex-1">
-                              <h3 className="font-black text-[#0A1F1F] text-sm mb-1">{paper.topic_name || paper.name || `Exam ${paper.id}`}</h3>
-                              <p className="text-[10px] text-[#0A1F1F] opacity-60 font-bold uppercase">
+                            <div className="flex-1 min-w-0 pr-3">
+                              <h3 className="font-black text-[#0A1F1F] text-sm mb-1 truncate" title={paper.topic_name || paper.name || `Exam ${paper.id}`}>
+                                {paper.topic_name || paper.name || `Exam ${paper.id}`}
+                              </h3>
+                              <p className="text-[10px] text-[#0A1F1F] opacity-60 font-bold uppercase truncate" title={paper.subject_name || paper.subject || 'Subject'}>
                                 {paper.subject_name || paper.subject || 'Subject'} • {paper.questions_count || paper.question_count || paper.qs || 0} QS • {paper.marks || paper.total_marks || 0} MARKS
                               </p>
-                              <p className="text-[9px] text-[#0A1F1F] opacity-40 font-medium">Generated on {paper.created_at ? new Date(paper.created_at).toLocaleDateString() : (paper.date || 'Unknown Date')}</p>
+                              <p className="text-[9px] text-[#0A1F1F] opacity-40 font-medium truncate">
+                                Generated on {paper.created_at ? new Date(paper.created_at).toLocaleDateString() : (paper.date || 'Unknown Date')}
+                              </p>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-shrink-0">
                               <motion.button
                                 whileHover={{ scale: 1.1 }}
                                 whileTap={{ scale: 0.9 }}
