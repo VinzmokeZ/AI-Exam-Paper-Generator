@@ -53,13 +53,16 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local' }: AIPromptB
         let generatedQuestions;
 
         if (selectedFile) {
-          // File-based generation
+          // File-based generation (Now supports mixed dual prompts)
           setFileStatus('uploading');
           generatedQuestions = await generationService.uploadGenerationFile(
             selectedFile,
             parseInt(prompt.match(/\d+/)?.[0] || '5'),
             complexity,
-            engine
+            engine,
+            undefined, // subjectId
+            undefined, // topicId
+            prompt.trim() !== '' ? prompt : undefined // Pass the prompt!
           );
         } else {
           // Normal prompt generation

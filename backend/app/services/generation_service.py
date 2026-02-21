@@ -60,7 +60,7 @@ class GenerationService:
         rag_service = get_rag_service()
         context = rag_service.query_context(f"Questions about {topic_name}", subject_id=query_id)
         
-    def _generate_questions_core(self, context_text, subject_name, topic_name, blooms_level, count, rubric, engine):
+    def _generate_questions_core(self, context_text, subject_name, topic_name, blooms_level, count, rubric, engine, custom_prompt=None):
         """
         Shared core logic for generating questions from a given context text.
         """
@@ -75,12 +75,22 @@ class GenerationService:
         else:
             structure_prompt = f"Generate {count} high-quality exam questions."
 
+        # Dual Prompting Hybrid Context
+        user_instruction_block = ""
+        if custom_prompt:
+            user_instruction_block = f"""
+            CRITICAL CUSTOM USER INSTRUCTION: 
+            The user explicitly requested: "{custom_prompt}"
+            You MUST follow this specific instruction when generating the questions while ONLY relying on the provided context below.
+            """
+
         prompt = f"""
         Role: Senior Academic Expert.
         Subject: {subject_name}
         Topic: {topic_name}
         Bloom's Level: {blooms_level}
         Constraints: {structure_prompt}
+        {user_instruction_block}
         
         OUTPUT FORMAT (JSON ARRAY ONLY):
         [
@@ -91,8 +101,7 @@ class GenerationService:
             "correct_answer": "A",
             "explanation": "Logic for the answer.",
             "marks": 5,
-            "bloom_level": "{blooms_level}",
-            "courseOutcomes": {{ "co1": 1, "co2": 3, "co3": 2, "co4": 1, "co5": 1 }}
+            "bloom_level": "{blooms_level}"
           }}
         ]
         
@@ -256,7 +265,7 @@ class GenerationService:
             
         return result
 
-    def generate_questions_from_text(self, context_text, subject_name, topic_name, count=5, complexity="Balanced", engine="local"):
+    def generate_questions_from_text(self, context_text, subject_name, topic_name, count=5, complexity="Balanced", engine="local", custom_prompt=None):
         """
         Generate questions directly from provided text (file content), skipping RAG lookup.
         """
@@ -267,7 +276,8 @@ class GenerationService:
             blooms_level=complexity,
             count=count,
             rubric=None,
-            engine=engine
+            engine=engine,
+            custom_prompt=custom_prompt
         )
 
     def generate_from_rubric(self, rubric_id, db, engine="local"):

@@ -147,10 +147,12 @@ async def generate_from_file(
     engine: str = Form("local"),
     subject_id: str = Form(None),
     topic_id: str = Form(None),
+    custom_prompt: str = Form(None),
     db: Session = Depends(get_db)
 ):
     """
-    Generate questions directly from an uploaded file context, linked to a specific subject/topic
+    Generate questions directly from an uploaded file context, linked to a specific subject/topic.
+    Includes memory-safe streaming extraction for massive PDFs.
     """
     try:
         # Save file temporarily
@@ -159,22 +161,32 @@ async def generate_from_file(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
-        # Extract text
+        # Extract text (Memory Safe & Token Capped)
         text = ""
+        MAX_CHARS = 50000 # ~10k words, roughly 12-15k tokens. Safe for Ram & Gemini.
+        
         _, ext = os.path.splitext(file_path)
         if ext.lower() == '.pdf':
             from PyPDF2 import PdfReader
             reader = PdfReader(file_path)
             for page in reader.pages:
-                text += page.extract_text() or ""
+                extracted = page.extract_text() or ""
+                text += extracted
+                if len(text) > MAX_CHARS:
+                    print(f"[File] Truncating PDF text at {MAX_CHARS} characters to prevent OOM/Token limits.")
+                    text = text[:MAX_CHARS]
+                    break
         elif ext.lower() == '.docx':
             from docx import Document
             doc = Document(file_path)
             for para in doc.paragraphs:
                 text += para.text + "\n"
+                if len(text) > MAX_CHARS:
+                    text = text[:MAX_CHARS]
+                    break
         else:
             with open(file_path, 'r', encoding='utf-8') as f:
-                text = f.read()
+                text = f.read(MAX_CHARS) # Read only up to max chars
         
         # Cleanup temp file
         os.remove(file_path)
@@ -222,12 +234,13 @@ async def generate_from_file(
 
         # Use Unified Generation Service
         generated_data = generation_service.generate_questions_from_text(
-            context_text=text[:50000],  # Increased context significantly for Cloud/Gemini
+            context_text=text[:MAX_CHARS],  # Increased context significantly for Cloud/Gemini
             subject_name=subject.name,
             topic_name=topic.name,
             count=count,
             complexity=complexity,
-            engine=engine
+            engine=engine,
+            custom_prompt=custom_prompt
         )
         
         # --- SAVE TO DATABASE ---
