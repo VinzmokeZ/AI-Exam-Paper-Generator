@@ -143,16 +143,20 @@ export function VettingCenter() {
 
   const handleComplete = async () => {
     const approved = questions.filter(q => vettedQuestions[q.id] === 'approved' || (!vettedQuestions[q.id] && q.id === currentQuestion.id));
+    const rejected = questions.filter(q => vettedQuestions[q.id] === 'rejected');
 
-    if (approved.length === 0) {
-      toast.error("Please approve at least one question!");
+    if (approved.length === 0 && rejected.length === 0) {
+      toast.error("Please vet at least one question!");
       return;
     }
 
     // 1. Update statuses in backend
     try {
       const { vettingService, gamificationService } = await import('../services/api');
-      await Promise.all(approved.map(q => vettingService.updateStatus(q.id, 'approved')));
+      await Promise.all([
+        ...approved.map(q => vettingService.updateStatus(q.id, 'approved')),
+        ...rejected.map(q => vettingService.updateStatus(q.id, 'rejected'))
+      ]);
 
       // 2. Create history record (Silent Save)
       await historyService.saveHistory({

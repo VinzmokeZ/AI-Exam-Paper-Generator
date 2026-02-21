@@ -231,7 +231,9 @@ export const generateExamPDF = async (data: ExamPaperData) => {
             }
         });
 
-        const filename = `${data.subject_name.replace(/\s+/g, '_')}_${data.topic_name.replace(/\s+/g, '_')}_Exam.pdf`;
+        const safeSubject = (data.subject_name || 'Subject').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const safeTopic = (data.topic_name || 'Topic').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const filename = `${safeSubject}_${safeTopic}_Exam.pdf`;
 
         if (Capacitor.isNativePlatform()) {
             // --- ANDROID/IOS NATIVE SAVE ---
