@@ -69,24 +69,28 @@ def get_report_data(db: Session = Depends(get_db)):
     rejected_q = db.query(Question).filter(Question.status == "rejected").count()
     pending_q = db.query(Question).filter(Question.status == "draft").count()
     
-    # LO Distribution (Mocked for dashboard since column removed)
-    lo_stats = [
-        {"code": "LO1", "current": 20, "target": 50, "percent": 40},
-        {"code": "LO2", "current": 15, "target": 50, "percent": 30},
-        {"code": "LO3", "current": 35, "target": 50, "percent": 70},
-        {"code": "LO4", "current": 10, "target": 50, "percent": 20},
-        {"code": "LO5", "current": 5, "target": 50, "percent": 10}
-    ]
+    # LO Distribution
+    lo_stats = []
+    for lo in ["LO1", "LO2", "LO3", "LO4", "LO5"]:
+        count = db.query(Question).filter(Question.learning_outcome == lo).count()
+        target = 50 # Adjusted target for demo
+        lo_stats.append({
+            "code": lo,
+            "current": count,
+            "target": target,
+            "percent": int((count / target * 100)) if target > 0 else 0
+        })
         
-    # Bloom's Distribution (Mocked for dashboard since column removed)
-    bloom_stats = [
-        {"level": "Knowledge", "count": int(total_q * 0.1), "percent": 10},
-        {"level": "Comprehension", "count": int(total_q * 0.2), "percent": 20},
-        {"level": "Application", "count": int(total_q * 0.4), "percent": 40},
-        {"level": "Analysis", "count": int(total_q * 0.15), "percent": 15},
-        {"level": "Synthesis", "count": int(total_q * 0.1), "percent": 10},
-        {"level": "Evaluation", "count": int(total_q * 0.05), "percent": 5}
-    ]
+    # Bloom's Distribution
+    bloom_levels = ["Knowledge", "Comprehension", "Application", "Analysis", "Synthesis", "Evaluation"]
+    bloom_stats = []
+    for level in bloom_levels:
+        count = db.query(Question).filter(Question.bloom_level == level).count()
+        bloom_stats.append({
+            "level": level,
+            "count": count,
+            "percent": int((count / total_q * 100)) if total_q > 0 else 0
+        })
 
     return {
         "overview": {

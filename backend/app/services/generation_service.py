@@ -413,6 +413,10 @@ class GenerationService:
                          "options": q.get('options'),
                          "correct_answer": q.get('correct_answer', ''),
                          "explanation": q.get('explanation', ''),
+                         "marks": q.get('marks', 5),
+                         "bloom_level": q.get('bloom_level', 'Application'),
+                         "course_outcome": q.get('course_outcome', 'CO1'),
+                         "learning_outcome": q.get('learning_outcome', 'LO1'),
                          "status": 'draft'
                     }
                     all_questions.append(q_obj)

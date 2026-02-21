@@ -243,6 +243,7 @@ async def generate_from_file(
                 options=q_data.get('options', []),
                 correct_answer=str(q_data.get('correct_answer', '')),
                 explanation=q_data.get('explanation', ''),
+                bloom_level=b_level,
                 status="draft"
             )
             db.add(new_q)

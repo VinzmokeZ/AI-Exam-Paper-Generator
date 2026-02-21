@@ -52,6 +52,11 @@ class Question(Base):
     options = Column(JSON, nullable=True)
     correct_answer = Column(String(2000))
     explanation = Column(String(5000), nullable=True)
+    marks = Column(Integer, default=5)
+    bloom_level = Column(String(50)) 
+    course_outcome = Column(String(50))
+    learning_outcome = Column(String(50))
+    course_outcomes = Column(JSON, nullable=True)
     status = Column(String(50), default="draft")  # draft, approved, rejected
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -100,6 +105,10 @@ class UserStats(Base):
     username = Column(String(255), default="Professor Vinz") 
     xp = Column(Integer, default=0)
     level = Column(Integer, default=1)
+    streak = Column(Integer, default=0)
+    longest_streak = Column(Integer, default=0)
+    total_days_active = Column(Integer, default=0)
+    last_activity = Column(DateTime, nullable=True)
     coins = Column(Integer, default=0)
     badges = Column(JSON, default=[])
 
