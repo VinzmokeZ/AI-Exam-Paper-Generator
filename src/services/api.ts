@@ -427,12 +427,14 @@ export const generationService = {
             return mockQuestions;
         }
     },
-    uploadGenerationFile: async (file: File, count: number = 5, complexity: string = "Balanced", engine: string = "local") => {
+    uploadGenerationFile: async (file: File, count: number = 5, complexity: string = "Balanced", engine: string = "local", subjectId?: string, topicId?: string) => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('count', count.toString());
         formData.append('complexity', complexity);
         formData.append('engine', engine);
+        if (subjectId) formData.append('subject_id', subjectId);
+        if (topicId) formData.append('topic_id', topicId);
 
         const response = await api.post('/generate/from-file', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }

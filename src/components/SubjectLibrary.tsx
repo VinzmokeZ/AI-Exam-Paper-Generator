@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { Search, Plus, ChevronRight, FileStack, ArrowLeft, Sparkles, X, Palette, Check, Loader2, Trash2, Filter } from 'lucide-react';
-import { subjectService, Subject, api, connectionLogs } from '../services/api';
+import { subjectService, Subject, api, connectionLogs, generationService } from '../services/api';
 import { Modal } from './Modal';
 import { toast } from 'sonner';
 import { DEFAULT_SUBJECTS } from '../constants/defaultData';
@@ -34,6 +34,14 @@ export function SubjectLibrary() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sortOption, setSortOption] = useState<'name' | 'code' | 'questions' | 'newest'>('name');
   const [showSortMenu, setShowSortMenu] = useState(false);
+
+  // Generation Modal State
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [selectedSubjectForGen, setSelectedSubjectForGen] = useState<Subject | null>(null);
+  const [genFile, setGenFile] = useState<File | null>(null);
+  const [genCount, setGenCount] = useState(5);
+  const [genComplexity, setGenComplexity] = useState('Balanced');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
     loadSubjects();
@@ -126,6 +134,39 @@ export function SubjectLibrary() {
       loadSubjects();
     } catch (error) {
       toast.error("Delete failed. Default subjects cannot be deleted until saved to database.");
+    }
+  };
+
+  const handleSmartGenerateSubmit = async () => {
+    if (!genFile || !selectedSubjectForGen) {
+      toast.error("Please upload a file first!");
+      return;
+    }
+
+    setIsGenerating(true);
+    const toastId = toast.loading("Analyzing content and generating questions...");
+
+    try {
+      const engine = localStorage.getItem('ai_engine_mode') || 'cloud';
+      const results = await generationService.uploadGenerationFile(
+        genFile,
+        genCount,
+        genComplexity,
+        engine,
+        selectedSubjectForGen.id.toString()
+      );
+
+      toast.success(`Successfully generated ${results.length || 0} questions!`, { id: toastId });
+      setShowGenerateModal(false);
+      setGenFile(null);
+
+      // Navigate to Vetting Center to review
+      navigate('/vetting');
+    } catch (error: any) {
+      console.error("Generation failed:", error);
+      toast.error(error.response?.data?.error || "AI Generation failed. Check your connection.", { id: toastId });
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -433,7 +474,21 @@ export function SubjectLibrary() {
                       </div>
 
                       <div className="flex flex-col gap-2 border-l border-white/10 pl-2 ml-1">
-                        {/* Check if ID is a large default ID (e.g. 301, 101) or small sequential DB ID */}
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedSubjectForGen(subject);
+                            setShowGenerateModal(true);
+                          }}
+                          className="w-8 h-8 bg-[#C5B3E6] rounded-lg flex items-center justify-center text-[#0A1F1F] border border-[#C5B3E6]/20"
+                          title="Smart AI Generate"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                        </motion.button>
+
                         {(typeof subject.id === 'number' && subject.id > 100) ? (
                           <motion.button
                             whileHover={{ scale: 1.1 }}
@@ -473,6 +528,99 @@ export function SubjectLibrary() {
           ))
         )}
       </div>
+      {/* Smart AI Generation Modal */}
+      <Modal
+        isOpen={showGenerateModal}
+        onClose={() => !isGenerating && setShowGenerateModal(false)}
+        title="Smart AI Generate"
+        subtitle={`Analyzing ${selectedSubjectForGen?.name}`}
+      >
+        <div className="space-y-4">
+          <div className="bg-white p-5 rounded-[28px] border-2 border-[#E5DED6] relative overflow-hidden group">
+            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none">Upload Source Material (PDF/Docx)</label>
+            <input
+              type="file"
+              onChange={(e) => setGenFile(e.target.files?.[0] || null)}
+              accept=".pdf,.docx,.txt"
+              className="absolute inset-0 opacity-0 cursor-pointer z-10"
+              disabled={isGenerating}
+            />
+            <div className="flex items-center gap-3 p-4 bg-[#F5F1ED] rounded-xl border-2 border-dashed border-[#E5DED6] group-hover:border-[#C5B3E6] transition-colors">
+              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                {genFile ? <Check className="w-5 h-5 text-green-500" /> : <Plus className="w-5 h-5 text-[#8B9E9E]" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-[#0A1F1F] truncate">
+                  {genFile ? genFile.name : "Tap to select file"}
+                </p>
+                <p className="text-[10px] text-[#8B9E9E] font-bold uppercase tracking-tighter">
+                  {genFile ? `${(genFile.size / 1024 / 1024).toFixed(2)} MB • Ready` : "PDF, DOCX, or Text up to 50MB"}
+                </p>
+              </div>
+              {genFile && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); setGenFile(null); }}
+                  className="w-8 h-8 rounded-lg hover:bg-red-50 flex items-center justify-center text-red-500"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white p-4 rounded-[28px] border-2 border-[#E5DED6]">
+              <label className="text-[9px] font-bold text-[#8B9E9E] uppercase mb-2 block tracking-widest leading-none text-center">Questions</label>
+              <div className="flex items-center justify-between pointer-events-auto">
+                <button onClick={() => setGenCount(Math.max(1, genCount - 1))} className="w-8 h-8 rounded-lg bg-[#F5F1ED] text-[#0A1F1F] font-black">-</button>
+                <span className="text-xl font-black text-[#0A1F1F]">{genCount}</span>
+                <button onClick={() => setGenCount(Math.min(20, genCount + 1))} className="w-8 h-8 rounded-lg bg-[#F5F1ED] text-[#0A1F1F] font-black">+</button>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-[28px] border-2 border-[#E5DED6]">
+              <label className="text-[9px] font-bold text-[#8B9E9E] uppercase mb-2 block tracking-widest leading-none text-center">Complexity</label>
+              <select
+                value={genComplexity}
+                onChange={(e) => setGenComplexity(e.target.value)}
+                className="w-full bg-[#F5F1ED] rounded-lg px-2 py-1.5 text-xs font-bold text-[#0A1F1F] outline-none border-none"
+              >
+                <option>Balanced</option>
+                <option>Recall</option>
+                <option>Analyze</option>
+                <option>Evaluate</option>
+              </select>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSmartGenerateSubmit}
+            disabled={isGenerating || !genFile}
+            className="w-full bg-[#0A1F1F] text-white rounded-[28px] py-5 font-bold uppercase tracking-[0.2em] text-xs shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-2 overflow-hidden relative"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>AI Processing...</span>
+                <motion.div
+                  className="absolute bottom-0 left-0 h-1 bg-[#C5B3E6]"
+                  initial={{ width: "0%" }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 30 }}
+                />
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 text-[#C5B3E6]" strokeWidth={3} />
+                <span>Begin Brainstorming</span>
+              </>
+            )}
+          </button>
+
+          <p className="text-[9px] text-center text-[#8B9E9E] font-bold uppercase tracking-tight opacity-60">
+            Powered by Cloud AI • Context Window: 128k Tokens
+          </p>
+        </div>
+      </Modal>
     </div>
   );
 }

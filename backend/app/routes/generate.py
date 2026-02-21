@@ -150,10 +150,12 @@ async def generate_from_file(
     count: int = Form(5),
     complexity: str = Form("Balanced"),
     engine: str = Form("local"),
+    subject_id: str = Form(None),
+    topic_id: str = Form(None),
     db: Session = Depends(get_db)
 ):
     """
-    Generate questions directly from an uploaded file context
+    Generate questions directly from an uploaded file context, linked to a specific subject/topic
     """
     try:
         # Save file temporarily
@@ -185,45 +187,57 @@ async def generate_from_file(
         if not text.strip():
             return {"error": "Could not extract text from file"}
 
+        # Resolve Subject & Topic
+        subject = None
+        if subject_id:
+            if str(subject_id).isdigit():
+                subject = db.query(Subject).filter(Subject.id == int(subject_id)).first()
+            else:
+                subject = db.query(Subject).filter(Subject.code == subject_id).first()
+        
+        if not subject:
+            # Fallback to "Uploaded Content" subject
+            subject_name = "Uploaded Content"
+            subject = db.query(Subject).filter(Subject.name == subject_name).first()
+            if not subject:
+                subject = Subject(
+                    name=subject_name, 
+                    code="FILE", 
+                    color="#50FA7B", 
+                    gradient="from-[#50FA7B] to-[#0A1F1F]",
+                    introduction="Content generated from uploaded files"
+                )
+                db.add(subject)
+                db.commit()
+                db.refresh(subject)
+
+        # Resolve Topic
+        topic = None
+        if topic_id:
+             topic = db.query(Topic).filter(Topic.id == int(topic_id)).first()
+        
+        if not topic:
+            topic_name = f"File: {file.filename}"
+            topic = db.query(Topic).filter(Topic.subject_id == subject.id, Topic.name == topic_name).first()
+            if not topic:
+                topic = Topic(subject_id=subject.id, name=topic_name, has_syllabus=False)
+                db.add(topic)
+                db.commit()
+                db.refresh(topic)
+
         # Use Unified Generation Service
         generated_data = generation_service.generate_questions_from_text(
-            context_text=text[:15000],  # Increased context limit
-            subject_name="Uploaded Content",
-            topic_name=f"Analysis: {file.filename}",
+            context_text=text[:50000],  # Increased context significantly for Cloud/Gemini
+            subject_name=subject.name,
+            topic_name=topic.name,
             count=count,
             complexity=complexity,
             engine=engine
         )
         
         # --- SAVE TO DATABASE ---
-        # 1. Get/Create "Uploaded Content" Subject
-        subject_name = "Uploaded Content"
-        subject = db.query(Subject).filter(Subject.name == subject_name).first()
-        if not subject:
-            subject = Subject(
-                name=subject_name, 
-                code="FILE", 
-                color="#50FA7B", 
-                gradient="from-[#50FA7B] to-[#0A1F1F]",
-                introduction="Content generated from uploaded files"
-            )
-            db.add(subject)
-            db.commit()
-            db.refresh(subject)
-            
-        # 2. Create Topic for this file
-        topic_name = f"File: {file.filename}"
-        topic = db.query(Topic).filter(Topic.subject_id == subject.id, Topic.name == topic_name).first()
-        if not topic:
-            topic = Topic(subject_id=subject.id, name=topic_name, has_syllabus=False)
-            db.add(topic)
-            db.commit()
-            db.refresh(topic)
-            
-        # 3. Save Questions
         stored_questions = []
         for q_data in generated_data:
-            # Ensure proper casting
             b_level = q_data.get('bloom_level', complexity)
             if isinstance(b_level, dict): b_level = "Mixed"
             
@@ -244,18 +258,21 @@ async def generate_from_file(
         
         db.commit()
         
-        # 4. Attach IDs to return data
         for i, q in enumerate(stored_questions):
             db.refresh(q)
             generated_data[i]['id'] = q.id
             
-        # 5. Log History
+        # Log History
         from ..models import ExamHistory
         new_history = ExamHistory(
             subject_id=subject.id,
-            exam_type="File Analysis",
-            question_count=len(stored_questions),
-            duration_minutes=60,
+            subject_name=subject.name,
+            topic_name=topic.name,
+            exam_type="Smart File Analysis",
+            questions_count=len(stored_questions),
+            marks=sum(q.get('marks', 5) for q in generated_data),
+            duration=60,
+            questions=[q.get('question_text') or q.get('question', '') for q in generated_data]
         )
         db.add(new_history)
         db.commit()
