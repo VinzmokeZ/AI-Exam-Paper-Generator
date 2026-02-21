@@ -310,7 +310,7 @@ export function GenerateExam() {
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="relative z-10 flex items-center px-5 pt-8 pb-3 flex-shrink-0"
+          className="relative z-10 flex items-center px-5 pt-16 pb-3 flex-shrink-0"
         >
           <motion.button
             whileHover={{ scale: 1.08 }}
@@ -332,7 +332,7 @@ export function GenerateExam() {
         </motion.div>
 
         {/* ── MAIN CONTENT ── */}
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 gap-6">
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 gap-6 -mt-10">
 
           {/* ── PROGRESS RING (properly viewport-scaled SVG) ── */}
           <motion.div

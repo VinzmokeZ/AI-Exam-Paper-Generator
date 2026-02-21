@@ -9,7 +9,11 @@ class RAGService:
         self.chroma_client = None
         self.collection = None
         self._enabled = False
-        
+        # Step 0: Check if we are on Render (Free tier memory limits)
+        if os.getenv("RENDER") == "true":
+            print("[RAG] Detected Render environment. Disabling RAG for stability (Free Tier).")
+            return
+
         # Step 1: Load embedding model (crash-proof, lazy import)
         try:
             from sentence_transformers import SentenceTransformer
