@@ -87,7 +87,6 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
             new_history = ExamHistory(
                 subject_name=subject.name,
                 topic_name=request.topic_name,
-                exam_type="AI Generation",
                 questions_count=len(stored_questions),
                 marks=sum(q.get('marks', 5) for q in generated_data),
                 duration=60, # Default
@@ -260,7 +259,6 @@ async def generate_from_file(
         new_history = ExamHistory(
             subject_name=subject.name,
             topic_name=topic.name,
-            exam_type="Smart File Analysis",
             questions_count=len(stored_questions),
             marks=sum(q.get('marks', 5) for q in generated_data),
             duration=60,

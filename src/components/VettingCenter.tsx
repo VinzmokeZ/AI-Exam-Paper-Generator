@@ -156,18 +156,12 @@ export function VettingCenter() {
 
       // 2. Create history record (Silent Save)
       await historyService.saveHistory({
-        name: `${state?.subjectName || currentQuestion.subject_name || 'General'} Exam`,
-        subject: state?.subjectName || currentQuestion.subject_name || currentQuestion.subject || 'General',
         subject_name: state?.subjectName || currentQuestion.subject_name || currentQuestion.subject || 'General',
         topic_name: state?.topicName || currentQuestion.topic_name || 'AI Generated',
-        question_count: approved.length,
-        qs: approved.length,
-        total_marks: approved.reduce((acc, q) => acc + (q.marks || 0), 0) || (approved.length * 2),
-        marks: approved.reduce((acc, q) => acc + (q.marks || 0), 0) || (approved.length * 2),
+        questions_count: approved.length,
+        marks: approved.reduce((acc, q) => acc + (q.marks || 5), 0),
         duration: state?.duration || 60,
-        questions: approved.map(q => ({ ...q, status: 'approved' })),
-        created_at: new Date().toISOString(),
-        date: new Date().toLocaleDateString()
+        questions: approved.map(q => ({ ...q, status: 'approved' }))
       });
 
       // 3. Reward user
