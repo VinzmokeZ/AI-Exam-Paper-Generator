@@ -71,7 +71,7 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
                     explanation=q_data.get('explanation', ''),
                     marks=q_data.get('marks', 5),
                     bloom_level=str(b_level),
-                    course_outcome=str(q_data.get('course_outcome', 'CO1')),
+                    course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes'),
                     status="draft"
                 )
                 db.add(new_q)
@@ -88,8 +88,10 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
             # 4. Log to Exam History and Activity
             from ..models import ExamHistory
             new_history = ExamHistory(
+                subject_id=subject.id,
                 subject_name=subject.name,
                 topic_name=request.topic_name,
+                exam_type="AI Generation",
                 questions_count=len(stored_questions),
                 marks=sum(q.marks for q in stored_questions),
                 duration=60, # Default
@@ -234,7 +236,7 @@ async def generate_from_file(
                 explanation=q_data.get('explanation', ''),
                 marks=q_data.get('marks', 5),
                 bloom_level=str(b_level),
-                course_outcome=str(q_data.get('course_outcome', 'CO1')),
+                course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes'),
                 status="draft"
             )
             db.add(new_q)

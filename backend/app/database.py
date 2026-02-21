@@ -86,7 +86,7 @@ def init_db():
     seed_defaults()
 
 def seed_defaults():
-    from .models import Subject, Topic
+    from .models import Subject, Topic, Achievement
     db = SessionLocal()
     try:
         if db.query(Subject).count() == 0:
@@ -129,6 +129,20 @@ def seed_defaults():
             
             db.commit()
             print(f"[DB] Successfully seeded {len(subjects_data)} subjects and {len(topics_data)} topics.")
+
+        if db.query(Achievement).count() == 0:
+            print("[DB] No achievements found. Seeding defaults...")
+            ach_data = [
+                {"name": "First Steps", "description": "Generate your first AI exam.", "badge_icon": "Zap", "unlocked": False},
+                {"name": "Question Master", "description": "Generate over 1000 questions in total.", "badge_icon": "Trophy", "unlocked": False},
+                {"name": "Streak Keeper", "description": "Maintain a 7-day learning streak.", "badge_icon": "Flame", "unlocked": False},
+                {"name": "Vetting Pro", "description": "Approve 50 questions in the vetting center.", "badge_icon": "CheckCircle", "unlocked": False},
+                {"name": "Subject Expert", "description": "Complete exams for 5 different subjects.", "badge_icon": "Award", "unlocked": False},
+            ]
+            for ach in ach_data:
+                db.add(Achievement(**ach))
+            db.commit()
+            print(f"[DB] Successfully seeded {len(ach_data)} achievements.")
     except Exception as e:
         print(f"[ERROR] Seeding failed: {e}")
         db.rollback()

@@ -476,7 +476,8 @@ export function Dashboard() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3 }}
               whileHover={{ scale: 1.05, y: -5 }}
-              className="bg-gradient-to-br from-[#8BE9FD] to-[#6FEDD6] rounded-2xl p-3 text-center border-3 border-white/30"
+              onClick={() => navigate('/subjects')}
+              className="bg-gradient-to-br from-[#8BE9FD] to-[#6FEDD6] rounded-2xl p-3 text-center border-3 border-white/30 cursor-pointer"
             >
               <BookOpen className="w-5 h-5 mx-auto mb-2 text-[#0A1F1F]" />
               <motion.p
@@ -495,7 +496,8 @@ export function Dashboard() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.35 }}
               whileHover={{ scale: 1.05, y: -5 }}
-              className="bg-gradient-to-br from-[#F1FA8C] to-[#50FA7B] rounded-2xl p-3 text-center border-3 border-white/30"
+              onClick={() => navigate('/vetting')}
+              className="bg-gradient-to-br from-[#F1FA8C] to-[#50FA7B] rounded-2xl p-3 text-center border-3 border-white/30 cursor-pointer"
             >
               <CheckSquare className="w-5 h-5 mx-auto mb-2 text-[#0A1F1F]" />
               <motion.p
@@ -514,7 +516,8 @@ export function Dashboard() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4 }}
               whileHover={{ scale: 1.05, y: -5 }}
-              className="bg-gradient-to-br from-[#FFB86C] to-[#FF6AC1] rounded-2xl p-3 text-center border-3 border-white/30"
+              onClick={() => navigate('/reports')}
+              className="bg-gradient-to-br from-[#FFB86C] to-[#FF6AC1] rounded-2xl p-3 text-center border-3 border-white/30 cursor-pointer"
             >
               <Calendar className="w-5 h-5 mx-auto mb-2 text-[#0A1F1F]" />
               <motion.p

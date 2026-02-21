@@ -67,8 +67,29 @@ export function VettingCenter() {
     if (state?.questions) {
       setQuestions(state.questions);
       setSelectedCOLevels(state.questions[0]?.courseOutcomes || defaultQuestions[0].courseOutcomes);
+    } else {
+      // Fetch all pending questions from backend
+      fetchPendingQuestions();
     }
   }, [location.state]);
+
+  const fetchPendingQuestions = async () => {
+    try {
+      const { vettingService } = await import('../services/api');
+      const pending = await vettingService.getDrafts();
+      if (pending && pending.length > 0) {
+        setQuestions(pending);
+        setSelectedCOLevels(pending[0].courseOutcomes || defaultQuestions[0].courseOutcomes);
+      } else {
+        setQuestions([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch pending questions:", error);
+      setQuestions([]);
+    } finally {
+      // Loading state could be added here if needed
+    }
+  };
 
   const currentQuestion = questions[currentIndex];
   // Guard clause if questions array is empty or undefined

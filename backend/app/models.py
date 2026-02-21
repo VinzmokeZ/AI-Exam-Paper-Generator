@@ -56,6 +56,7 @@ class Question(Base):
     bloom_level = Column(String(50), nullable=True)
     course_outcome = Column(String(50), nullable=True)
     learning_outcome = Column(String(50), nullable=True)  # LO1, LO2, LO3, LO4, LO5
+    course_outcomes = Column(JSON, nullable=True) # Granular levels {co1: 1, co2: 3...}
     status = Column(String(50), default="draft")  # draft, approved, rejected
     created_at = Column(DateTime, default=datetime.utcnow)
 

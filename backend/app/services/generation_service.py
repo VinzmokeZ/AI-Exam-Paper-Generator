@@ -76,58 +76,30 @@ class GenerationService:
             structure_prompt = f"Generate {count} high-quality exam questions."
 
         prompt = f"""
-        Role: Senior Academic Expert & Exam Creator.
-        Task: Create professional-grade exam questions based on the provided STUDY CONTEXT.
+        Role: Senior Academic Expert.
+        Subject: {subject_name}
+        Topic: {topic_name}
+        Bloom's Level: {blooms_level}
+        Constraints: {structure_prompt}
         
-        STUDY CONTEXT:
-        ---
-        {context_text}
-        ---
-        
-        DETAILS:
-        - Subject: {subject_name}
-        - Topic: {topic_name}
-        - Bloom's Level: {blooms_level} (Complexity)
-        - Constraints: {structure_prompt}
-        
-        CRITICAL INSTRUCTIONS:
-        1. Use ONLY the facts from the STUDY CONTEXT if provided. If the context is limited, result to your expert knowledge of {subject_name}.
-        2. Generate questions that are challenging but fair.
-        3. For MCQ questions, you MUST:
-           - Provide EXACTLY 4 options labeled A, B, C, D
-           - Each option must be a complete, plausible answer
-           - Mark the correct answer clearly (e.g., "A" or "B" or "C" or "D")
-           - Include 3 plausible distractors (wrong but reasonable answers)
-        4. For Short Answer and Essay questions, provide a model answer or key points in the "correct_answer" field.
-        5. YOU MUST RESPOND WITH ONLY A RAW JSON ARRAY. No conversation, no markdown blocks, no code fences.
-        
-        JSON SCHEMA (FOLLOW EXACTLY):
+        OUTPUT FORMAT (JSON ARRAY ONLY):
         [
           {{
-            "question": "The complete question text?",
+            "question": "Question text?",
             "question_type": "MCQ",
-            "options": ["A. First complete option", "B. Second complete option", "C. Third complete option", "D. Fourth complete option"],
+            "options": ["A. Choice 1", "B. Choice 2", "C. Choice 3", "D. Choice 4"],
             "correct_answer": "A",
-            "explanation": "Detailed pedagogical explanation of why the answer is correct and why others are wrong.",
+            "explanation": "Logic for the answer.",
             "marks": 5,
             "bloom_level": "{blooms_level}",
-            "course_outcome": "CO1"
+            "courseOutcomes": {{ "co1": 1, "co2": 3, "co3": 2, "co4": 1, "co5": 1 }}
           }}
         ]
         
-        EXAMPLE MCQ FORMAT:
-        {{
-          "question": "What is the time complexity of binary search?",
-          "question_type": "MCQ",
-          "options": ["A. O(n)", "B. O(log n)", "C. O(n^2)", "D. O(1)"],
-          "correct_answer": "B",
-          "explanation": "Binary search divides the search space in half with each iteration, resulting in O(log n) time complexity.",
-          "marks": 2,
-          "bloom_level": "Remember",
-          "course_outcome": "CO1"
-        }}
+        CO MAPPING (1-3): co1:Analyze, co2:Knowledge, co3:Apply, co4:Evaluate, co5:Create.
         
-        Now generate the questions following this exact format.
+        Context for generation:
+        {context_text}
         """
         
         self.is_render = os.getenv("RENDER") == "true"

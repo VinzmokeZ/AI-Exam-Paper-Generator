@@ -24,27 +24,23 @@ class OllamaService:
         # 2. Construct System Prompt
         system_prompt = f"""
         You are an expert exam setter for {subject}. 
-        Your task is to generate {count} questions based on the user's prompt.
+        Your task is to generate {count} questions in strict JSON format.
         
-        STRICT RULES:
-        1. Output MUST be a valid JSON array.
-        2. Do not include any text before or after the JSON array.
-        3. Follow this specific schema for each question:
+        STRICT SCHEMA:
            {{
-             "id": <unique_number>,
+             "id": <number>,
              "type": "MCQ" or "ESSAY",
-             "question": "<question_text>",
-             "options": ["A", "B", "C", "D"], (Only for MCQ)
-             "correctAnswer": <index_0_to_3>, (Only for MCQ)
-             "explanation": "<step_by_step_logic_for_answer>",
+             "question": "<text>",
+             "options": ["A", "B", "C", "D"], (MCQ only)
+             "correctAnswer": <0-3>, (MCQ only)
+             "explanation": "<logic>",
              "subject": "{subject}",
              "courseOutcomes": {{ "co1": <1-3>, "co2": <1-3>, "co3": <1-3>, "co4": <1-3>, "co5": <1-3> }}
            }}
         
-        COMPLEXITY INSTRUCTION: {level_instruction}
+        CO MAPPING (1-3): co1:Analyze, co2:Knowledge, co3:Apply, co4:Evaluate, co5:Create.
         
-        For Course Outcomes (co1-co5), assign a level from 1 (Mild) to 3 (High) based on the question's difficulty.
-        The "explanation" should provide a clear, step-by-step reasoning for the correct answer.
+        COMPLEXITY: {level_instruction}
         """
 
         # 3. Call Ollama
