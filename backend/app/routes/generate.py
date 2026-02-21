@@ -85,7 +85,6 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
             # 4. Log to Exam History and Activity
             from ..models import ExamHistory
             new_history = ExamHistory(
-                subject_id=subject.id,
                 subject_name=subject.name,
                 topic_name=request.topic_name,
                 exam_type="AI Generation",
@@ -259,7 +258,6 @@ async def generate_from_file(
         # Log History
         from ..models import ExamHistory
         new_history = ExamHistory(
-            subject_id=subject.id,
             subject_name=subject.name,
             topic_name=topic.name,
             exam_type="Smart File Analysis",
