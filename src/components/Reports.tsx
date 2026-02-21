@@ -73,15 +73,36 @@ export function Reports() {
     { label: 'Pending Review', value: reportData?.overview?.pending?.toLocaleString() || '0', icon: Clock, color: '#FFB86C', bg: '#FFB86C20' },
   ];
 
-  const learningOutcomes = reportData?.learningOutcomes || [
-    { code: 'LO1', name: 'Understand fundamentals', current: 0, total: 200, percentage: 0, status: 'On track', color: '#8BE9FD' },
-    { code: 'LO2', name: 'Apply knowledge', current: 0, total: 200, percentage: 0, status: 'On track', color: '#C5B3E6' },
-  ];
+  const LO_META: Record<string, any> = {
+    'LO1': { name: 'Understand fundamentals', color: '#8BE9FD' },
+    'LO2': { name: 'Apply knowledge', color: '#C5B3E6' },
+    'LO3': { name: 'Analyze problems', color: '#FFB86C' },
+    'LO4': { name: 'Design solutions', color: '#50FA7B' },
+    'LO5': { name: 'Evaluate approaches', color: '#FF6AC1' }
+  };
 
-  const bloomsData = reportData?.blooms || [
-    { level: 'Knowledge', count: 0, percentage: 0, color: '#8BE9FD', shortName: 'Know' },
-    { level: 'Comprehension', count: 0, percentage: 0, color: '#C5B3E6', shortName: 'Comp' },
-  ];
+  const learningOutcomes = (reportData?.learningOutcomes || []).map((lo: any) => ({
+    ...lo,
+    name: LO_META[lo.code]?.name || 'Unknown LO',
+    color: LO_META[lo.code]?.color || '#8B9E9E',
+    status: lo.percent >= 80 ? 'On track' : (lo.percent >= 50 ? 'Needs review' : 'Needs more questions'),
+    percentage: lo.percent
+  }));
+
+  const BLOOMS_META: Record<string, any> = {
+    'Knowledge': { shortName: 'Know', color: '#8BE9FD' },
+    'Comprehension': { shortName: 'Comp', color: '#C5B3E6' },
+    'Application': { shortName: 'Appl', color: '#8BE9FD' },
+    'Analysis': { shortName: 'Anal', color: '#FFB86C' },
+    'Synthesis': { shortName: 'Synt', color: '#50FA7B' },
+    'Evaluation': { shortName: 'Eval', color: '#FF6AC1' }
+  };
+
+  const bloomsData = (reportData?.blooms || []).map((b: any) => ({
+    ...b,
+    shortName: BLOOMS_META[b.level]?.shortName || b.level.substring(0, 4),
+    color: BLOOMS_META[b.level]?.color || '#8B9E9E'
+  }));
 
   const syllabusTopics = [
     { name: 'Introduction to Algorithms', questions: 120, percentage: 95, color: '#50FA7B' },
@@ -523,7 +544,7 @@ export function Reports() {
                           </div>
                           <div className="text-right">
                             <p className="text-sm font-bold" style={{ color: lo.color }}>
-                              {lo.current}/{lo.total}
+                              {lo.current}/{lo.target}
                             </p>
                           </div>
                         </div>
