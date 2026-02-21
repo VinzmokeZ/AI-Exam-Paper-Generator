@@ -1,0 +1,28 @@
+databases:
+  - name: ai-exam-db
+    databaseName: ai_exam_oracle
+    user: ai_exam_user
+    plan: free # Auto-selects Free Tier (Persistent 1GB)
+    region: singapore # Optimized for user location
+
+services:
+  - type: web
+    name: ai-exam-backend
+    runtime: python
+    region: singapore
+    plan: free # Auto-selects Free Tier
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.app.main:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0 # Matches dev environment
+      - key: USE_MYSQL
+        value: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ai-exam-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false # User will be prompted to enter this securely
+      - key: GOOGLE_API_KEY
+        sync: false # User will be prompted to enter this securely

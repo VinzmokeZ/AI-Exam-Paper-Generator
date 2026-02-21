@@ -1,0 +1,22 @@
+IMPORTANT COMMANDS
+
+1. BUILD THE PROJECT
+   Command: npm run build
+   Description: Compiles the frontend for production, creating the 'build' folder.
+
+2. FIREBASE LOGIN
+   Command: npx firebase login
+   Description: Logs into your Firebase account via the browser. Run this once if you haven't deployed from this machine before.
+
+3. DEPLOY TO FIREBASE
+   Command: npx firebase deploy
+   Description: Deploys the contents of the 'build' folder to your live Firebase Hosting URL.
+
+4. LOCAL DEVELOPMENT
+   Command: npm run dev
+   Description: Starts the local development server for testing.
+
+5. LIVE TUNNEL (FOR LIVE SITE)
+   File: START_TUNNEL.bat
+   Description: Run this file to connect your live Firebase site to your local backend/Ollama.
+   Note: Keep the window open while using the live site!

@@ -1,0 +1,5 @@
+Mathematics Core Concepts
+1. Calculus: Limits, derivatives, and integrals. The Fundamental Theorem of Calculus links differentiation and integration.
+2. Linear Algebra: Matrix operations, eigenvalues, and vectors. Systems of linear equations can be solved using Gaussian elimination.
+3. Probability: The likelihood of an event. Bayes' Theorem relates conditional probabilities of two events.
+4. Statistics: Normal distribution, standard deviation, and p-values. Hypothesis testing is used to make inferences about populations.
