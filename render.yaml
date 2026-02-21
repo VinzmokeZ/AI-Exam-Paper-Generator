@@ -11,7 +11,7 @@ services:
     runtime: python
     region: singapore
     plan: free # Auto-selects Free Tier
-    buildCommand: pip install -r backend/requirements-render.txt
+    buildCommand: pip install -r backend/requirements.txt
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.app.main:app
     envVars:
       - key: PYTHON_VERSION
