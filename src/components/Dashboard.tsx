@@ -727,7 +727,8 @@ export function Dashboard() {
               <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-2.5 py-1.5 bg-white/40 backdrop-blur-sm rounded-xl text-[10px] font-bold text-[#0A1F1F] border-2 border-white/50 flex-shrink-0 whitespace-nowrap"
+                onClick={() => navigate('/reports')}
+                className="px-2.5 py-1.5 bg-white/40 backdrop-blur-sm rounded-xl text-[10px] font-bold text-[#0A1F1F] border-2 border-white/50 flex-shrink-0 whitespace-nowrap cursor-pointer"
               >
                 View All
               </motion.div>

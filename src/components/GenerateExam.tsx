@@ -310,7 +310,7 @@ export function GenerateExam() {
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className="relative z-10 flex items-center px-5 pt-12 pb-3 flex-shrink-0"
+          className="relative z-10 flex items-center px-5 pt-8 pb-3 flex-shrink-0"
         >
           <motion.button
             whileHover={{ scale: 1.08 }}
@@ -398,7 +398,7 @@ export function GenerateExam() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#C5B3E6]/30 bg-[#C5B3E6]/10"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#C5B3E6]/30 bg-[#C5B3E6]/10 -ml-1"
               >
                 <Zap className="w-3 h-3 text-[#C5B3E6] fill-[#C5B3E6] animate-pulse flex-shrink-0" />
                 <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#C5B3E6] whitespace-nowrap">
