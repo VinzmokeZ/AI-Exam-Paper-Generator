@@ -21,27 +21,16 @@ from ..models import Question, Topic, Subject
 @router.post("/questions")
 def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
     try:
-        # 1. Generate via AI Service
-        if request.engine in ["local", "ollama"]:
-            from ..services.ollama_service import OllamaService
-            ollama_svc = OllamaService()
-            generated_data = ollama_svc.generate_questions(
-                prompt=f"Topic: {request.topic_name}. Context: {request.subject_name}",
-                count=request.count,
-                complexity=request.blooms_level, # Mapping "Mixed", "High", etc. from frontend to backend complexity logic
-                subject=request.subject_name
-            )
-        else:
-            # Fallback to existing cloud/OpenAI service
-            generated_data = generation_service.generate_questions(
-                request.subject_name,
-                request.topic_name,
-                request.blooms_level,
-                request.count,
-                request.subject_id,
-                request.rubric,
-                request.engine
-            )
+        # 1. Generate via Unified AI Service (handles Local/Cloud/Fallback automatically)
+        generated_data = generation_service.generate_questions(
+            request.subject_name,
+            request.topic_name,
+            request.blooms_level,
+            request.count,
+            request.subject_id,
+            request.rubric,
+            request.engine
+        )
 
         # 2. Resolve Subject & Topic for DB Association
         # Try to find subject by ID or Code

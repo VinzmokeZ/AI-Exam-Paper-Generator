@@ -130,15 +130,39 @@ class GenerationService:
         Now generate the questions following this exact format.
         """
         
-        # Select Client-Based on Engine
+        self.is_render = os.getenv("RENDER") == "true"
+        
+        # Select Client-Based on Engine with Auto-Fallback
         is_cloud = engine in ["cloud", "openai", "gemini"]
+        
+        # Override: If we are on Render, "local" engine must switch to cloud (no Ollama on Render)
+        if self.is_render and not is_cloud:
+            print("[GEN] Detected Render environment. Overriding 'local' engine to 'cloud'.")
+            is_cloud = True
+
         client = self.cloud_client if is_cloud else self.local_client
         model = self.cloud_model if is_cloud else self.local_model
         provider_name = self.provider if is_cloud else "Local (Ollama)"
         
+        # Final Guard: If we want cloud but keys are missing, we might fail
+        if is_cloud and self.provider == "none":
+            print("[GEN] ERROR: Cloud engine requested but no API keys found.")
+
         max_retries = 3
         for attempt in range(max_retries):
             try:
+                # Extra Guard: verify local client is actually alive if NOT in cloud mode
+                if not is_cloud and attempt == 0:
+                    try:
+                        import requests
+                        requests.get("http://localhost:11434/api/tags", timeout=2)
+                    except:
+                        print("[GEN] Ollama unreachable. Falling back to Cloud...")
+                        is_cloud = True
+                        client = self.cloud_client
+                        model = self.cloud_model
+                        provider_name = self.provider
+
                 print(f"[GEN] Attempt {attempt + 1}/{max_retries} for {topic_name[:30]} using {provider_name} ({model})...")
                 response = client.chat.completions.create(
                     model=model,

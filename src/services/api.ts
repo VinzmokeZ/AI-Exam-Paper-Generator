@@ -138,7 +138,7 @@ export const discoverConnectivity = async () => {
     targets.push(tunnelUrl);
 
     // 4. CLOUD BACKEND (Render) - Add your URL here once deployed
-    const cloudUrl = 'https://ai-exam-oracle.onrender.com';
+    const cloudUrl = 'https://ai-exam-paper-generator-eyb1.onrender.com';
     targets.push(cloudUrl);
 
     // Deduplicate while preserving order
