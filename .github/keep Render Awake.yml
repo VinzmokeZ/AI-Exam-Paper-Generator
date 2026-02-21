@@ -1,0 +1,15 @@
+name: Keep Render Server Awake
+
+on:
+  schedule:
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-Ping Backend Health check
+        run: |
+          curl -sS "https://dashboard.render.com/web/srv-d6cgoc7pm1nc73caliag/deploys/dep-d6ct6dhr0fns73d6ck50" > /dev/null
+          echo "Render server pinged successfully!"
