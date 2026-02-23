@@ -144,12 +144,13 @@ class RAGService:
         subject_id_str = str(subject_id)
         filter_dict = {"subject_id": subject_id_str}
         
+        col = self.collection
+        if col is None:
+            print("[RAG] ⚠️ Local collection is None. Skipping local query.")
+            return self.fetch_wikipedia_context(query)
+            
         try:
-            if not self.collection:
-                print("[RAG] ⚠️ Local collection not found. Skipping local query.")
-                return self.fetch_wikipedia_context(query) # Skip to wiki immediately
-
-            results = self.collection.query(
+            results = col.query(
                 query_texts=[query],
                 n_results=n_results,
                 where=filter_dict
@@ -158,7 +159,7 @@ class RAGService:
                 print(f"[RAG] 📚 Found {len(results['documents'][0])} local chunks for {query}")
                 return results['documents'][0]
         except Exception as e:
-            print(f"[RAG] Query error: {e}")
+            print(f"[RAG] Internal Query Failure: {e}")
             
         # Wikipedia Fallback
         wiki_context = self.fetch_wikipedia_context(query.replace("Questions about ", ""))

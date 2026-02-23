@@ -12,32 +12,33 @@ class GenerationService:
         # Cloud config with Multi-Provider Support (OpenAI / Gemini)
         openai_key = os.getenv("OPENAI_API_KEY")
         gemini_key = os.getenv("GOOGLE_API_KEY")
+        model_env = os.getenv("OPENAI_MODEL", "").lower()
         
-        if gemini_key and len(gemini_key) > 5 and ("gemini" in os.getenv("OPENAI_MODEL", "").lower() or "google" in os.getenv("OPENAI_MODEL", "").lower()):
+        # Determine Provider based on Model Name or Key Presence
+        is_gemini_model = "gemini" in model_env or "google" in model_env
+        primary_key = gemini_key if is_gemini_model and gemini_key else (openai_key or gemini_key)
+        
+        if is_gemini_model and primary_key:
             self.provider = "gemini"
             self.cloud_client = OpenAI(
-                api_key=gemini_key,
+                api_key=primary_key,
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
             )
             self.cloud_model = os.getenv("OPENAI_MODEL", "gemini-1.5-flash")
-        elif openai_key and len(openai_key) > 5:
+            print(f"[GEN] Provider initialized: Gemini (using {primary_key[:4]}...{primary_key[-4:]})")
+        elif openai_key:
             self.provider = "openai"
             self.cloud_client = OpenAI(
                 api_key=openai_key,
                 base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
             )
             self.cloud_model = os.getenv("OPENAI_MODEL", "gpt-4o")
-        elif gemini_key and len(gemini_key) > 5:
-            self.provider = "gemini"
-            self.cloud_client = OpenAI(
-                api_key=gemini_key,
-                base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
-            )
-            self.cloud_model = os.getenv("OPENAI_MODEL", "gemini-1.5-flash")
+            print(f"[GEN] Provider initialized: OpenAI (using {openai_key[:4]}...{openai_key[-4:]})")
         else:
             self.provider = "none"
             self.cloud_client = OpenAI(api_key="missing_key")
             self.cloud_model = "gpt-4o"
+            print("[GEN] ⚠️ Provider initialized: NONE (Missing Keys)")
         
         self.cache_dir = "backend_cache"
         os.makedirs(self.cache_dir, exist_ok=True)

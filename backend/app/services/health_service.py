@@ -59,8 +59,11 @@ class HealthService:
         db_ok = self.check_database()
         ai_ok = self.check_ollama()
         
-        if db_ok and ai_ok:
+        is_render = os.getenv("RENDER") == "true"
+        if db_ok and (ai_ok or is_render):
             print("[HEALTH] ALL SYSTEMS NOMINAL ✅")
+            if is_render and not ai_ok:
+                print("[HEALTH] (Ollama offline as expected on Render)")
         else:
             print("[HEALTH] SYSTEM DEGRADED ⚠️ Check system_health.log")
 
