@@ -392,15 +392,15 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local' }: AIPromptB
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-3 gap-3 mb-4 relative z-10">
+              <div className="flex gap-2 mb-4 relative z-10 overflow-x-auto pb-1 no-scrollbar">
                 <motion.button
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => document.getElementById('adhoc-file-input')?.click()}
-                  className={`py-3 rounded-2xl border-4 border-white/30 flex items-center justify-center gap-2 transition-all ${selectedFile ? 'bg-[#50FA7B] shadow-[0_0_15px_#50FA7B60]' : 'bg-gradient-to-br from-[#8BE9FD] to-[#6FEDD6]'}`}
+                  className={`flex-1 min-w-[80px] py-2.5 rounded-xl border-2 border-white/30 flex items-center justify-center gap-1.5 transition-all ${selectedFile ? 'bg-[#50FA7B] shadow-[0_0_10px_#50FA7B40]' : 'bg-gradient-to-br from-[#8BE9FD] to-[#6FEDD6]'}`}
                 >
-                  <FileText className="w-4 h-4 text-[#0A1F1F]" />
-                  <span className="text-xs font-bold text-[#0A1F1F]">
+                  <FileText className="w-3.5 h-3.5 text-[#0A1F1F]" />
+                  <span className="text-[10px] font-black text-[#0A1F1F] uppercase">
                     {selectedFile ? 'Selected' : 'File'}
                   </span>
                 </motion.button>
@@ -408,7 +408,7 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local' }: AIPromptB
                 <input
                   id="adhoc-file-input"
                   type="file"
-                  className="hidden"
+                  style={{ display: 'none' }}
                   accept=".pdf,.docx,.txt"
                   onChange={handleFileChange}
                 />
@@ -417,19 +417,19 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local' }: AIPromptB
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowSuggestions(!showSuggestions)}
-                  className="py-3 rounded-2xl bg-gradient-to-br from-[#F1FA8C] to-[#50FA7B] border-4 border-white/30 flex items-center justify-center gap-2"
+                  className="flex-1 min-w-[80px] py-2.5 rounded-xl bg-gradient-to-br from-[#F1FA8C] to-[#50FA7B] border-2 border-white/30 flex items-center justify-center gap-1.5"
                 >
-                  <Brain className="w-4 h-4 text-[#0A1F1F]" />
-                  <span className="text-xs font-bold text-[#0A1F1F]">Ideas</span>
+                  <Brain className="w-3.5 h-3.5 text-[#0A1F1F]" />
+                  <span className="text-[10px] font-black text-[#0A1F1F] uppercase">Ideas</span>
                 </motion.button>
 
                 <motion.button
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  className="py-3 rounded-2xl bg-gradient-to-br from-[#FFB86C] to-[#FF6AC1] border-4 border-white/30 flex items-center justify-center gap-2"
+                  className="flex-1 min-w-[80px] py-2.5 rounded-xl bg-gradient-to-br from-[#FFB86C] to-[#FF6AC1] border-2 border-white/30 flex items-center justify-center gap-1.5"
                 >
-                  <Zap className="w-4 h-4 text-[#0A1F1F]" />
-                  <span className="text-xs font-bold text-[#0A1F1F]">Quick</span>
+                  <Zap className="w-3.5 h-3.5 text-[#0A1F1F]" />
+                  <span className="text-[10px] font-black text-[#0A1F1F] uppercase">Quick</span>
                 </motion.button>
               </div>
 

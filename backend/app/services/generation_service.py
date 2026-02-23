@@ -263,12 +263,13 @@ class GenerationService:
         # Use subject_id for RAG context if provided, otherwise fallback to name
         query_id = subject_id if subject_id else subject_name.lower().replace(" ", "")
         
-        # Optimize: Skip RAG for 'General' subject OR if Input is a long prompt (Ask AI Box)
-        # Long inputs (>40 chars) are usually full questions/prompts, not simple topics.
+        # Cloud Dominance: Skip RAG for 'General' subject, long prompts, OR if using cloud engines
         is_full_prompt = len(topic_name) > 40
+        is_cloud_engine = engine in ["cloud", "openai", "gemini"]
         
-        if subject_name.lower() == "general" or is_full_prompt:
-            print(f"[GEN] Skipping RAG (Subject: {subject_name}, Prompt: {is_full_prompt}). Using input directly for speed.")
+        if subject_name.lower() == "general" or is_full_prompt or is_cloud_engine:
+            reason = "Subject: General" if subject_name.lower() == "general" else ("Prompt Length" if is_full_prompt else "Cloud Engine")
+            print(f"[GEN] Skipping RAG (Reason: {reason}). Using input directly for speed.")
             context_text = f"User Prompt: {topic_name}" 
         else:
             # Get RAG Service (Lazy)
