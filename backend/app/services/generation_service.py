@@ -34,13 +34,28 @@ class GenerationService:
         elif openai_key and len(openai_key) > 5:
             # Standard OpenAI or OpenRouter routing
             self.provider = "openai"
+            
+            # Force OpenRouter URL if key is sk-or- and no URL provided
+            base_url = os.getenv("OPENAI_BASE_URL")
+            if not base_url and openai_key.startswith("sk-or-"):
+                base_url = "https://openrouter.ai/api/v1"
+            elif not base_url:
+                base_url = "https://api.openai.com/v1"
+
+            # OpenRouter specific headers (highly recommended to avoid 401/403)
+            headers = {}
+            if is_openrouter:
+                headers["HTTP-Referer"] = "https://github.com/VinzmokeZ/AI-Exam-Paper-Generator"
+                headers["X-Title"] = "AI Exam Oracle"
+
             self.cloud_client = OpenAI(
                 api_key=openai_key,
-                base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+                base_url=base_url,
+                default_headers=headers
             )
             self.cloud_model = os.getenv("OPENAI_MODEL", "gpt-4o")
             type_label = "OPENROUTER" if is_openrouter else "OPENAI"
-            print(f"[GEN] Provider initialized: {type_label} using {openai_key[:4]}...")
+            print(f"[GEN] Provider initialized: {type_label} ({base_url}) using {openai_key[:4]}...")
         else:
             self.provider = "none"
             self.cloud_client = OpenAI(api_key="missing_key")
