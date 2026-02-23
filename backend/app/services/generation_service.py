@@ -9,32 +9,38 @@ class GenerationService:
         self.local_client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
         self.local_model = "phi3:mini"
         
-        # Cloud config with Multi-Provider Support (Universal Key Detection)
+        # Cloud config with Multi-Provider Support (Universal OpenRouter & Gemini Detection)
         openai_key = os.getenv("OPENAI_API_KEY")
         gemini_key = os.getenv("GOOGLE_API_KEY")
         model_env = os.getenv("OPENAI_MODEL", "").lower()
+        base_url_env = os.getenv("OPENAI_BASE_URL", "").lower()
         
         # Determine Provider based on Model Name or Key Presence
-        # We prefer gemini_key for gemini models, but fallback to ANY available key (Nuclear Fallback)
         is_gemini_model = "gemini" in model_env or "google" in model_env
-        any_key = gemini_key or openai_key 
+        is_openrouter = "openrouter.ai" in base_url_env or (openai_key and openai_key.startswith("sk-or-"))
         
-        if is_gemini_model and any_key:
+        # Preferred key logic
+        any_key = gemini_key or openai_key 
+
+        if is_gemini_model and any_key and not is_openrouter:
+            # ONLY use direct Gemini routing if NOT using OpenRouter
             self.provider = "gemini"
             self.cloud_client = OpenAI(
                 api_key=any_key,
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
             )
             self.cloud_model = os.getenv("OPENAI_MODEL", "gemini-1.5-flash")
-            print(f"[GEN] Provider initialized: GEMINI (Model-Driven) using {any_key[:4]}...")
+            print(f"[GEN] Provider initialized: DIRECT GEMINI using {any_key[:4]}...")
         elif openai_key and len(openai_key) > 5:
+            # Standard OpenAI or OpenRouter routing
             self.provider = "openai"
             self.cloud_client = OpenAI(
                 api_key=openai_key,
                 base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
             )
             self.cloud_model = os.getenv("OPENAI_MODEL", "gpt-4o")
-            print(f"[GEN] Provider initialized: OPENAI (Key-Driven) using {openai_key[:4]}...")
+            type_label = "OPENROUTER" if is_openrouter else "OPENAI"
+            print(f"[GEN] Provider initialized: {type_label} using {openai_key[:4]}...")
         else:
             self.provider = "none"
             self.cloud_client = OpenAI(api_key="missing_key")
@@ -51,23 +57,7 @@ class GenerationService:
             key_str += str(rubric)
         return hashlib.md5(key_str.encode()).hexdigest()
 
-    def generate_questions(self, subject_name, topic_name, blooms_level, subject_id=None, count=5, rubric=None, engine="local"):
-        # Check Cache First for Speed
-        cache_key = self._get_cache_key(subject_name, topic_name, blooms_level, rubric)
-        cache_file = os.path.join(self.cache_dir, f"{cache_key}.json")
-        
-        if os.path.exists(cache_file) and not self.ignore_cache:
-            print(f"[CACHE] Hit for {topic_name}. Returning instantly.")
-            with open(cache_file, "r") as f:
-                return json.load(f)
 
-        # Use subject_id for RAG context if provided, otherwise fallback to name
-        query_id = subject_id if subject_id else subject_name.lower().replace(" ", "")
-        
-        # Get RAG Service (Lazy)
-        rag_service = get_rag_service()
-        context = rag_service.query_context(f"Questions about {topic_name}", subject_id=query_id)
-        
     def _generate_questions_core(self, context_text, subject_name, topic_name, blooms_level, count, rubric, engine, custom_prompt=None):
         """
         Shared core logic for generating questions from a given context text.
