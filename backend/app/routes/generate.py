@@ -343,7 +343,7 @@ def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db))
             questions_count=len(request.questions),
             marks=total_marks,
             duration=request.duration,
-            questions=[q.get('question_text') or q.get('question', '') for q in request.questions]
+            questions=request.questions
         )
         db.add(new_history)
         

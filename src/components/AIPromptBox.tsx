@@ -53,13 +53,17 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, 
         const { generationService } = await import('../services/api');
         let generatedQuestions;
 
+        // Priority: Prop Engine (if explicitly passed non-default) -> Global Setting -> Prop Default
+        const storedEngine = localStorage.getItem('ai_engine_mode') || 'cloud';
+        const currentEngine = (engine !== 'local') ? engine : storedEngine;
+
         if (selectedFile) {
           setFileStatus('uploading');
           generatedQuestions = await generationService.uploadGenerationFile(
             selectedFile,
             parseInt(prompt.match(/\d+/)?.[0] || '5'),
             complexity,
-            engine,
+            currentEngine,
             subjectId,
             undefined,
             prompt.trim() !== '' ? prompt : undefined,
@@ -73,7 +77,7 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, 
             parseInt(prompt.match(/\d+/)?.[0] || '5'),
             subjectId,
             undefined,
-            engine,
+            currentEngine,
             true
           );
         }
