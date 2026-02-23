@@ -333,9 +333,20 @@ class GenerationService:
         topic_names = [t.name for t in topics]
         
         # Get RAG context (Heavy operation, do once)
-        from ..services.rag_service import get_rag_service
-        rag_service = get_rag_service()
-        context = rag_service.query_context(f"General concepts for {subject.name}", subject_id=subject.id)
+        # Cloud Dominance: Skip RAG for cloud engines to maximize speed and accuracy
+        is_cloud_engine = engine in ["cloud", "openai", "gemini"]
+        context = None
+        
+        if not is_cloud_engine:
+            try:
+                from ..services.rag_service import get_rag_service
+                rag_service = get_rag_service()
+                context = rag_service.query_context(f"General concepts for {subject.name}", subject_id=subject.id)
+                print(f"[GEN] Prepared RAG context for {subject.name}.")
+            except Exception as e:
+                print(f"[RAG] Warning: Rubric RAG failed {e}. Proceeding without extra context.")
+        else:
+            print(f"[GEN] Strategy: Direct Cloud Generation (RAG Bypassed for Rubric).")
         
         # Build base prompt
         base_prompt = build_generation_prompt(rubric, subject.name, topic_names, db, context=context)
