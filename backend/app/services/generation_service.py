@@ -10,14 +10,14 @@ class GenerationService:
         self.local_model = "phi3:mini"
         
         # Cloud config with Multi-Provider Support (Universal OpenRouter & Gemini Detection)
-        openai_key = os.getenv("OPENAI_API_KEY")
-        gemini_key = os.getenv("GOOGLE_API_KEY")
-        model_env = os.getenv("OPENAI_MODEL", "").lower()
-        base_url_env = os.getenv("OPENAI_BASE_URL", "").lower()
+        openai_key = os.getenv("OPENAI_API_KEY", "").strip().replace('"', '').replace("'", "")
+        gemini_key = os.getenv("GOOGLE_API_KEY", "").strip().replace('"', '').replace("'", "")
+        model_env = os.getenv("OPENAI_MODEL", "").lower().strip()
+        base_url_env = os.getenv("OPENAI_BASE_URL", "").lower().strip()
         
         # Determine Provider based on Model Name or Key Presence
         is_gemini_model = "gemini" in model_env or "google" in model_env
-        is_openrouter = "openrouter.ai" in base_url_env or (openai_key and openai_key.startswith("sk-or-"))
+        is_openrouter = "openrouter.ai" in base_url_env or openai_key.startswith("sk-or-")
         
         # Preferred key logic
         any_key = gemini_key or openai_key 
@@ -36,7 +36,7 @@ class GenerationService:
             self.provider = "openai"
             
             # Force OpenRouter URL if key is sk-or- and no URL provided
-            base_url = os.getenv("OPENAI_BASE_URL")
+            base_url = base_url_env if base_url_env else None
             if not base_url and openai_key.startswith("sk-or-"):
                 base_url = "https://openrouter.ai/api/v1"
             elif not base_url:
@@ -189,7 +189,9 @@ class GenerationService:
                     temperature=0.2, 
                     max_tokens=4000, 
                     timeout=900.0,
-                    response_format={"type": "json_object"}
+                    # JSON mode is only natively supported by OpenAI. 
+                    # OpenRouter + Gemini/Claude sometimes fail if this is set.
+                    response_format={"type": "json_object"} if provider_name == "openai" and "gpt" in model else None
                 )
                 content = response.choices[0].message.content
                 if not content:
