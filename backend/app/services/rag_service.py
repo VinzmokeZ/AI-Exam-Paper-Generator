@@ -145,6 +145,9 @@ class RAGService:
         filter_dict = {"subject_id": subject_id_str}
         
         try:
+            if not self.collection:
+                print("[RAG] ⚠️ Local collection not found. Skipping local query.")
+                return None
             results = self.collection.query(
                 query_texts=[query],
                 n_results=n_results,

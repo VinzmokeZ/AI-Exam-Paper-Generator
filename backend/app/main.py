@@ -40,9 +40,31 @@ app.include_router(achievements.router, prefix="/api/achievements", tags=["Achie
 app.include_router(rubrics.router, tags=["Rubrics"])
 app.include_router(course_outcomes.router, tags=["Course Outcomes"])
 
+# --- STARTUP PURGE LOGIC ---
+def purge_backend_cache():
+    """Clears the backend_cache folder on startup to prevent stale fallback hits."""
+    import shutil
+    import os
+    cache_dir = "backend_cache"
+    if os.path.exists(cache_dir):
+        print(f"[PURGE] Clearing {cache_dir} for a fresh start...")
+        try:
+            # Delete and recreate to ensure it's empty
+            shutil.rmtree(cache_dir)
+            os.makedirs(cache_dir, exist_ok=True)
+            print("[PURGE] ✅ Cache cleared successfully.")
+        except Exception as e:
+            print(f"[PURGE] ❌ Failed to clear cache: {e}")
+    else:
+        os.makedirs(cache_dir, exist_ok=True)
+
 @app.on_event("startup")
 def startup_event():
     print("[SERVER] App starting up...")
+    
+    # 0. One-time Cache Purge on Startup
+    purge_backend_cache()
+    
     from .database import init_db
     
     # 0. Initialize Database Tables (fast, keep synchronous)
