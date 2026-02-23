@@ -112,12 +112,21 @@ class GenerationService:
           }}
         ]
         
-        DYNAMIC CO MAPPING REQUIREMENT (0-5 Level):
-        You MUST generate a unique `courseOutcomes` JSON object for EVERY question.
-        Each question must have keys `co1` through `co5`.
-        Assign an integer level (0 to 5) for each CO based strictly on the question's content, where 0 means not applicable and 5 means highly applicable.
-        Make sure the weightages are unique and accurately reflect the specific question, rather than just copying a static template.
+        DYNAMIC CO MAPPING REQUIREMENT (STRICT 0-5 SCALE):
+        You MUST generate a unique and mathematically derived `courseOutcomes` JSON object for EVERY question.
+        Each question must have exactly five keys: `co1`, `co2`, `co3`, `co4`, and `co5`.
+        Assign an integer level (0 to 5) for each CO based strictly on how much the question tests that specific outcome.
+        - 0: Not relevant at all.
+        - 1-2: Low relevance/indirectly related.
+        - 3-4: Moderately relevant.
+        - 5: Highly relevant/primary focus.
+        DO NOT use the same static mapping for all questions. Each question must reflect its own specific content.
         
+        VETTING REQUIREMENT:
+        - MCQ questions MUST have exactly 4 options.
+        - Only ONE option should be the `correct_answer`.
+        - Provide a detailed `explanation` for why the answer is correct and why other options are distal.
+
         Context for generation:
         {context_text}
         """
@@ -154,18 +163,20 @@ class GenerationService:
                         client = self.cloud_client
                         model = self.cloud_model
                         provider_name = self.provider
+                        if self.provider == "none": # If cloud fallback also has no keys
+                            raise ValueError("[GEN] ERROR: Ollama unreachable and no cloud API keys found. Cannot generate questions.")
 
                 print(f"[GEN] Attempt {attempt + 1}/{max_retries} for {topic_name[:30]} using {provider_name} ({model})...")
                 response = client.chat.completions.create(
                     model=model,
                     messages=[
-                        {"role": "system", "content": "You are a JSON-only API. You must return RAW JSON. No markdown formatting."},
+                        {"role": "system", "content": "You are a professional educational assessment engine. You always return valid JSON representing an array of questions or an object containing a 'questions' array. No conversational text."},
                         {"role": "user", "content": prompt}
                     ],
-                    temperature=0.1, 
+                    temperature=0.2, 
                     max_tokens=4000, 
-                    timeout=600.0,
-                    response_format={"type": "json_object"} if attempt > 0 else None
+                    timeout=900.0,
+                    response_format={"type": "json_object"}
                 )
                 content = response.choices[0].message.content
                 if not content:
@@ -223,18 +234,8 @@ class GenerationService:
                     with open("generation_errors.log", "a") as f:
                         f.write(f"\n[ERROR] {e}\n{error_trace}\n")
                 
-        # Fallback if all retries fail
-        return [
-            {
-                "question": f"Sample question about {topic_name} at {blooms_level} level?",
-                "options": ["Op1", "Op2", "Op3", "Op4"],
-                "correct_answer": "Op1",
-                "explanation": "This is a fallback placeholder due to generation timeout or error.",
-                "marks": 5,
-                "bloom_level": blooms_level,
-                "course_outcome": "CO1"
-            }
-        ]
+        # No fallback list allowed anymore. If we fail, we raise the error so the user knows.
+        raise Exception(f"Failed to generate valid questions after {max_retries} attempts. The AI model may be overloaded or the context is too complex.")
 
     def generate_questions(self, subject_name, topic_name, blooms_level, count=5, subject_id=None, rubric=None, engine="local"):
         # Check Cache First for Speed

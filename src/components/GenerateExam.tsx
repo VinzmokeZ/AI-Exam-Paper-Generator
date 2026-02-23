@@ -139,7 +139,7 @@ export function GenerateExam() {
     }
   };
 
-  const handleGenerateFromRubric = async (rubricId: number, prompt: string, file?: File | null) => {
+  const handleGenerateFromRubric = async (rubricId: number, prompt: string, file?: File | null, engineOverride?: string) => {
     if (!rubricId) {
       toast.error('Please select a rubric first');
       return;
@@ -170,10 +170,11 @@ export function GenerateExam() {
       };
 
       await animateProgress(40, 1000);
-      const engineName = activeModel || 'AI Engine';
-      setCurrentStatus(`Generating via ${engineName}...`);
+      const effectiveEngine = engineOverride || activeModel || 'local';
+      const engineLabel = effectiveEngine === 'cloud' ? 'Gemini Cloud' : 'Ollama';
+      setCurrentStatus(`Generating via ${engineLabel}...`);
 
-      const result = await rubricService.generateFromRubric(rubricId, file || undefined, prompt);
+      const result = await rubricService.generateFromRubric(rubricId, file || undefined, prompt, effectiveEngine);
 
       const questions = result.questions || result.all_questions || [];
       if (questions.length > 0) {
@@ -747,16 +748,36 @@ export function GenerateExam() {
                 </div>
 
                 {selectedRubric === rubric.id && (
-                  <motion.button
-                    type="button"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    onClick={(e) => { e.stopPropagation(); setRubricPromptContext(rubric.id); setShowAIPrompt(true); }}
-                    className="w-full bg-[#0A1F1F] rounded-2xl py-4 mt-4 text-[#C5B3E6] font-black text-xs flex items-center justify-center gap-3 shadow-2xl border-2 border-white/10"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span>GENERATE NOW</span>
-                  </motion.button>
+                  <div className="grid grid-cols-2 gap-3 mt-4">
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleGenerateFromRubric(rubric.id, "", null, 'cloud');
+                      }}
+                      className="bg-[#0A1F1F] rounded-2xl py-4 text-[#50FA7B] font-black text-xs flex items-center justify-center gap-2 shadow-xl border-2 border-[#50FA7B]/20"
+                    >
+                      <Zap className="w-3.5 h-3.5 fill-[#50FA7B]" />
+                      <span>FLASH GENERATE</span>
+                    </motion.button>
+
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRubricPromptContext(rubric.id);
+                        setShowAIPrompt(true);
+                      }}
+                      className="bg-[#0A2F2F] rounded-2xl py-4 text-[#C5B3E6] font-black text-xs flex items-center justify-center gap-2 shadow-xl border-2 border-white/10"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>CUSTOM PROMPT</span>
+                    </motion.button>
+                  </div>
                 )}
               </motion.div>
             ))}

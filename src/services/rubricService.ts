@@ -57,7 +57,7 @@ class RubricService {
         return response.data;
     }
 
-    async generateFromRubric(rubricId: number, file?: File, instructions?: string): Promise<{
+    async generateFromRubric(rubricId: number, file?: File, instructions?: string, engineOverride?: string): Promise<{
         success: boolean;
         questions_generated: number;
         log: any;
@@ -66,7 +66,7 @@ class RubricService {
         questions?: any[];
         all_questions?: any[];
     }> {
-        const engine = localStorage.getItem('ai_engine_mode') || 'local';
+        const engine = engineOverride || localStorage.getItem('ai_engine_mode') || 'local';
 
         const formData = new FormData();
         formData.append('engine', engine);

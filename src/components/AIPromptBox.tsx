@@ -116,7 +116,7 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local' }: AIPromptB
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 bg-[#0A2F2F]/80 backdrop-blur-sm z-50 flex items-center justify-center p-6"
+      className="fixed inset-0 bg-[#0A2F2F]/60 backdrop-blur-md z-[60] flex items-center justify-center p-4"
     >
       {/* Floating particles (Success Mode has more particles) */}
       {[...Array(isSuccess ? 12 : 8)].map((_, i) => (
@@ -223,7 +223,7 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local' }: AIPromptB
             className="w-full max-w-md relative"
           >
             {/* Main Container */}
-            <div className="bg-gradient-to-br from-[#F5F1ED] to-[#E5DED6] rounded-[40px] p-5 border-4 border-[#E5DED6] relative overflow-hidden shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar flex flex-col">
+            <div className="bg-gradient-to-br from-[#F5F1ED] to-[#E5DED6] rounded-[40px] p-5 border-4 border-[#E5DED6] relative overflow-hidden shadow-2xl max-h-[70vh] overflow-y-auto custom-scrollbar flex flex-col mx-auto">
               {/* Animated gradient overlay */}
               <motion.div
                 animate={{
