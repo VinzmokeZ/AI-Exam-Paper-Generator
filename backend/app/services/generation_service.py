@@ -9,31 +9,32 @@ class GenerationService:
         self.local_client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
         self.local_model = "phi3:mini"
         
-        # Cloud config with Multi-Provider Support (OpenAI / Gemini)
+        # Cloud config with Multi-Provider Support (Universal Key Detection)
         openai_key = os.getenv("OPENAI_API_KEY")
         gemini_key = os.getenv("GOOGLE_API_KEY")
         model_env = os.getenv("OPENAI_MODEL", "").lower()
         
         # Determine Provider based on Model Name or Key Presence
+        # We prefer gemini_key for gemini models, but fallback to ANY available key (Nuclear Fallback)
         is_gemini_model = "gemini" in model_env or "google" in model_env
-        primary_key = gemini_key if is_gemini_model and gemini_key else (openai_key or gemini_key)
+        any_key = gemini_key or openai_key 
         
-        if is_gemini_model and primary_key:
+        if is_gemini_model and any_key:
             self.provider = "gemini"
             self.cloud_client = OpenAI(
-                api_key=primary_key,
+                api_key=any_key,
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
             )
             self.cloud_model = os.getenv("OPENAI_MODEL", "gemini-1.5-flash")
-            print(f"[GEN] Provider initialized: Gemini (using {primary_key[:4]}...{primary_key[-4:]})")
-        elif openai_key:
+            print(f"[GEN] Provider initialized: GEMINI (Model-Driven) using {any_key[:4]}...")
+        elif openai_key and len(openai_key) > 5:
             self.provider = "openai"
             self.cloud_client = OpenAI(
                 api_key=openai_key,
                 base_url=os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
             )
             self.cloud_model = os.getenv("OPENAI_MODEL", "gpt-4o")
-            print(f"[GEN] Provider initialized: OpenAI (using {openai_key[:4]}...{openai_key[-4:]})")
+            print(f"[GEN] Provider initialized: OPENAI (Key-Driven) using {openai_key[:4]}...")
         else:
             self.provider = "none"
             self.cloud_client = OpenAI(api_key="missing_key")
@@ -481,6 +482,10 @@ class GenerationService:
                     
                 generation_log["questions_generated"] += len(generated_qs)
                 print(f"[GEN] Finished batch. Total so far: {generation_log['questions_generated']}")
+
+        # Final Guard: check if anything at all was generated
+        if not all_questions:
+             raise Exception("Failed to generate any questions after all task attempts. Please check your AI API keys and model settings.")
 
         # Save all to DB in one transaction (Safe for SQLite WAL)
         try:

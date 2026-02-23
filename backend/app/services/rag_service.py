@@ -169,12 +169,16 @@ class RAGService:
         return []
 
 # rag_service = RAGService()
-# Global instance (initialized lazily)
+# Global instance (initialized with lock)
 ra_service_instance = None
+import threading
+rag_lock = threading.Lock()
 
 def get_rag_service():
     global ra_service_instance
     if ra_service_instance is None:
-        print("[RAG] Initializing RAG Service (Lazy)...")
-        ra_service_instance = RAGService()
+        with rag_lock:
+            if ra_service_instance is None:
+                print("[RAG] Initializing RAG Service (Singleton)...")
+                ra_service_instance = RAGService()
     return ra_service_instance
