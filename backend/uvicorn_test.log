@@ -1,0 +1,102 @@
+C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\pydantic\_internal\_config.py:345: UserWarning: Valid config keys have changed in V2:
+* 'orm_mode' has been renamed to 'from_attributes'
+  warnings.warn(message, UserWarning)
+INFO:     Started server process [20280]
+INFO:     Waiting for application startup.
+ERROR:    Traceback (most recent call last):
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\app\main.py", line 47, in startup_event
+    print("[DB] \u2705 Database ready.")
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2705' in position 5: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\starlette\routing.py", line 692, in lifespan
+    async with self.lifespan_context(app) as maybe_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\contextlib.py", line 204, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\fastapi\routing.py", line 133, in merged_lifespan
+    async with original_context(app) as maybe_original_state:
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\starlette\routing.py", line 569, in __aenter__
+    await self._router.startup()
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\starlette\routing.py", line 671, in startup
+    handler()
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\app\main.py", line 49, in startup_event
+    print(f"[DB] \u26a0\ufe0f Database init failed (non-fatal): {e}")
+  File "C:\Users\Vinz\AppData\Local\Programs\Python\Python311\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 5-6: character maps to <undefined>
+
+ERROR:    Application startup failed. Exiting.
+[SERVER] App starting up...
+[DB] Initializing database...

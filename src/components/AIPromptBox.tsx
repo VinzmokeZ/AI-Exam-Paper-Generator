@@ -12,7 +12,7 @@ const promptSuggestions = [
 ];
 
 interface AIPromptBoxProps {
-  onGenerate?: (prompt: string, engine?: string) => void;
+  onGenerate?: (prompt: string, engine?: string, file?: File | null) => void;
   onClose?: () => void;
   engine?: string;
 }
@@ -40,9 +40,9 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local' }: AIPromptB
   const handleGenerate = async () => {
     if (prompt.trim() || selectedFile) {
       // If parent component provided a handler, use it instead of internal logic
-      if (onGenerate && !selectedFile) {
-        // Pass engine state properly
-        onGenerate(prompt, engine);
+      if (onGenerate) {
+        // Pass engine and file state properly
+        onGenerate(prompt, engine, selectedFile);
         return;
       }
 

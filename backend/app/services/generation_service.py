@@ -101,11 +101,22 @@ class GenerationService:
             "correct_answer": "A",
             "explanation": "Logic for the answer.",
             "marks": 5,
-            "bloom_level": "{blooms_level}"
+            "bloom_level": "{blooms_level}",
+            "courseOutcomes": {{
+              "co1": 3,
+              "co2": 0,
+              "co3": 5,
+              "co4": 1,
+              "co5": 0
+            }}
           }}
         ]
         
-        CO MAPPING (1-3): co1:Analyze, co2:Knowledge, co3:Apply, co4:Evaluate, co5:Create.
+        DYNAMIC CO MAPPING REQUIREMENT (0-5 Level):
+        You MUST generate a unique `courseOutcomes` JSON object for EVERY question.
+        Each question must have keys `co1` through `co5`.
+        Assign an integer level (0 to 5) for each CO based strictly on the question's content, where 0 means not applicable and 5 means highly applicable.
+        Make sure the weightages are unique and accurately reflect the specific question, rather than just copying a static template.
         
         Context for generation:
         {context_text}
@@ -280,7 +291,7 @@ class GenerationService:
             custom_prompt=custom_prompt
         )
 
-    def generate_from_rubric(self, rubric_id, db, engine="local"):
+    def generate_from_rubric(self, rubric_id, db, engine="local", context_text=None, custom_prompt=None):
         """
         Generate exam questions based on rubric constraints using PARALLEL EXECUTION
         Distributes questions across learning outcomes and question types
@@ -387,16 +398,42 @@ class GenerationService:
         def execute_task(task):
             try:
                 print(f"[THREAD] Starting {task['count']} {task['question_type']} for {task['learning_outcome']} using {engine}")
-                return self.generate_questions(
-                    subject_name=subject.name,
-                    topic_name=f"{task['learning_outcome']} - {subject.name}", # Contextual topic
-                    blooms_level="Apply", # Default, or derive from LO?
-                    count=task['count'],
-                    rubric=None, # Already applying rubric constraints via task
-                    engine=engine
-                ), task
+                
+                # Enforce the question type + any custom user prompt
+                task_prompt = f"MUST strictly generate exactly {task['count']} {task['question_type']} questions. "
+                if custom_prompt:
+                    task_prompt += f" USER INSTRUCTION: {custom_prompt}"
+
+                if context_text:
+                    # Using explicitly provided file context
+                    return self.generate_questions_from_text(
+                        context_text=context_text,
+                        subject_name=subject.name,
+                        topic_name=f"{task['learning_outcome']} - {subject.name}",
+                        count=task['count'],
+                        complexity="Balanced",
+                        engine=engine,
+                        custom_prompt=task_prompt
+                    ), task
+                else:
+                    # Using RAG or topic-based generation where prompt = topic_name internally
+                    # To pass custom_prompt when there's no context_text, we pass the built prompt as topic_name
+                    final_topic = f"{task['learning_outcome']} - {subject.name}"
+                    if custom_prompt:
+                         final_topic = f"Topic: {final_topic}. {task_prompt}"
+
+                    return self.generate_questions(
+                        subject_name=subject.name,
+                        topic_name=final_topic,
+                        blooms_level="Apply", 
+                        count=task['count'],
+                        rubric=None, 
+                        engine=engine
+                    ), task
             except Exception as e:
                 print(f"[THREAD] Error: {e}")
+                import traceback
+                traceback.print_exc()
                 return [], task
 
         # Run with ThreadPool

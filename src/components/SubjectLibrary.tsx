@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { Search, Plus, ChevronRight, FileStack, ArrowLeft, Sparkles, X, Palette, Check, Loader2, Trash2, Filter } from 'lucide-react';
+import { Search, Plus, ChevronRight, FileStack, ArrowLeft, Sparkles, X, Palette, Check, Loader2, Trash2, Filter, Wand2 } from 'lucide-react';
 import { subjectService, Subject, api, connectionLogs, generationService } from '../services/api';
 import { Modal } from './Modal';
 import { toast } from 'sonner';
@@ -40,6 +40,7 @@ export function SubjectLibrary() {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [selectedSubjectForGen, setSelectedSubjectForGen] = useState<Subject | null>(null);
   const [genFile, setGenFile] = useState<File | null>(null);
+  const [genPrompt, setGenPrompt] = useState('');
   const [genCount, setGenCount] = useState(5);
   const [genComplexity, setGenComplexity] = useState('Balanced');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -164,7 +165,9 @@ export function SubjectLibrary() {
         genCount,
         genComplexity,
         engine,
-        selectedSubjectForGen.id.toString()
+        selectedSubjectForGen.id.toString(),
+        undefined, // Topic ID is undefined here
+        genPrompt.trim() !== '' ? genPrompt : undefined // Pass the prompt to the backend!
       );
 
       // Update indexed files registry
@@ -606,6 +609,92 @@ export function SubjectLibrary() {
               </div>
             </div>
           )}
+
+          {/* Text Prompt Input area matching AIPromptBox */}
+          <div className="relative z-10">
+            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-2 block tracking-widest leading-none">Custom Instructions (Optional)</label>
+            <div className="relative">
+              {/* Glow effect */}
+              {genPrompt && (
+                <motion.div
+                  animate={{
+                    opacity: [0.3, 0.6, 0.3],
+                    scale: [0.98, 1.02, 0.98],
+                  }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="absolute inset-0 bg-gradient-to-r from-[#C5B3E6] via-[#8BE9FD] to-[#FFB86C] rounded-3xl blur-xl"
+                />
+              )}
+
+              <textarea
+                value={genPrompt}
+                onChange={(e) => setGenPrompt(e.target.value)}
+                placeholder="Example: Focus heavily on chapter 3, make the distractors very tricky..."
+                maxLength={500}
+                rows={3}
+                className="w-full bg-white rounded-3xl px-5 py-4 text-[#0A1F1F] placeholder:text-[#0A1F1F]/40 text-sm border-4 border-[#E5DED6] outline-none resize-none relative z-10 focus:border-[#C5B3E6] transition-colors"
+              />
+
+              {/* Character count */}
+              <div className="absolute bottom-3 right-4 z-20">
+                <motion.span
+                  animate={{
+                    color: genPrompt.length > 500 * 0.9 ? '#FF6AC1' : '#0A1F1F',
+                  }}
+                  className="text-[10px] font-bold opacity-40"
+                >
+                  {genPrompt.length}/500
+                </motion.span>
+              </div>
+
+              {/* Magic wand button */}
+              <motion.button
+                whileHover={{ scale: 1.1, rotate: 15 }}
+                whileTap={{ scale: 0.9 }}
+                className="absolute top-3 right-3 w-8 h-8 bg-gradient-to-br from-[#FFB86C] to-[#FF6AC1] rounded-xl flex items-center justify-center z-20 shadow-lg"
+              >
+                <Wand2 className="w-4 h-4 text-[#0A1F1F]" />
+              </motion.button>
+            </div>
+
+            {/* Suggestions */}
+            <AnimatePresence>
+              {!genPrompt && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-3 overflow-hidden relative z-10"
+                >
+                  <p className="text-[9px] font-bold text-[#0A1F1F] opacity-60 uppercase mb-2">Try these ideas:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { text: 'Add 5 hard scenario questions', color: '#C5B3E6' },
+                      { text: 'Make options tricky & subtle', color: '#8BE9FD' },
+                      { text: 'Include real-world examples', color: '#FFB86C' }
+                    ].map((suggestion, index) => (
+                      <motion.button
+                        key={index}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.1 }}
+                        whileHover={{ scale: 1.05, y: -2 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setGenPrompt(suggestion.text)}
+                        className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold border text-[#0A1F1F] truncate"
+                        style={{
+                          backgroundColor: `${suggestion.color}30`,
+                          borderColor: `${suggestion.color}60`,
+                        }}
+                      >
+                        {suggestion.text}
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Count and Complexity */}
           <div className="grid grid-cols-2 gap-4">

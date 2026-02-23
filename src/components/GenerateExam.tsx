@@ -39,6 +39,7 @@ export function GenerateExam() {
   const [currentStatus, setCurrentStatus] = useState('Initializing...');
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(true);
   const [showAIPrompt, setShowAIPrompt] = useState(false);
+  const [rubricPromptContext, setRubricPromptContext] = useState<number | null>(null);
   const [isBackendOnline, setIsBackendOnline] = useState(false);
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
@@ -138,8 +139,8 @@ export function GenerateExam() {
     }
   };
 
-  const handleGenerateFromRubric = async () => {
-    if (!selectedRubric) {
+  const handleGenerateFromRubric = async (rubricId: number, prompt: string, file?: File | null) => {
+    if (!rubricId) {
       toast.error('Please select a rubric first');
       return;
     }
@@ -154,7 +155,7 @@ export function GenerateExam() {
     setIsGenerating(true);
     setGenerationStep('progress');
     setProgress(0);
-    setCurrentStatus('Analyzing Rubric...');
+    setCurrentStatus('Analyzing Rubric & Context...');
 
     try {
       let localProgress = 0;
@@ -172,7 +173,7 @@ export function GenerateExam() {
       const engineName = activeModel || 'AI Engine';
       setCurrentStatus(`Generating via ${engineName}...`);
 
-      const result = await rubricService.generateFromRubric(selectedRubric);
+      const result = await rubricService.generateFromRubric(rubricId, file || undefined, prompt);
 
       const questions = result.questions || result.all_questions || [];
       if (questions.length > 0) {
@@ -191,7 +192,7 @@ export function GenerateExam() {
     }
   };
 
-  const handleAIGenerate = async (prompt: string, engineOverride?: string) => {
+  const handleAIGenerate = async (prompt: string, engineOverride?: string, file?: File | null) => {
     // Find subject - check both state and list
     let subject = subjects.find(s => s.id.toString() === selectedSubjectId?.toString());
 
@@ -258,15 +259,28 @@ export function GenerateExam() {
         }
       }, 1500);
 
-      const result = await generationService.generateQuestions(
-        subject.name,
-        prompt,
-        "Mixed",
-        parseInt(prompt.match(/\d+/)?.[0] || '5'), // Extract count from prompt or default to 5
-        subject.id.toString(),
-        undefined,
-        effectiveEngine
-      );
+      let result;
+      if (file) {
+        result = await generationService.uploadGenerationFile(
+          file,
+          parseInt(prompt.match(/\d+/)?.[0] || '5'),
+          "Balanced",
+          effectiveEngine,
+          subject.id.toString(),
+          undefined,
+          prompt.trim() !== '' ? prompt : undefined
+        );
+      } else {
+        result = await generationService.generateQuestions(
+          subject.name,
+          prompt,
+          "Mixed",
+          parseInt(prompt.match(/\d+/)?.[0] || '5'), // Extract count from prompt or default to 5
+          subject.id.toString(),
+          undefined,
+          effectiveEngine
+        );
+      }
 
       clearInterval(msgInterval);
 
@@ -737,7 +751,7 @@ export function GenerateExam() {
                     type="button"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    onClick={(e) => { e.stopPropagation(); handleGenerateFromRubric(); }}
+                    onClick={(e) => { e.stopPropagation(); setRubricPromptContext(rubric.id); setShowAIPrompt(true); }}
                     className="w-full bg-[#0A1F1F] rounded-2xl py-4 mt-4 text-[#C5B3E6] font-black text-xs flex items-center justify-center gap-3 shadow-2xl border-2 border-white/10"
                   >
                     <Sparkles className="w-4 h-4" />
@@ -779,11 +793,16 @@ export function GenerateExam() {
         {showAIPrompt && (
           <AIPromptBox
             engine={activeModel || 'local'}
-            onGenerate={(prompt, engine) => {
+            onGenerate={(prompt, engine, file) => {
               setShowAIPrompt(false);
-              handleAIGenerate(prompt, engine);
+              if (rubricPromptContext) {
+                handleGenerateFromRubric(rubricPromptContext, prompt, file);
+              } else {
+                handleAIGenerate(prompt, engine, file);
+              }
+              setRubricPromptContext(null);
             }}
-            onClose={() => setShowAIPrompt(false)}
+            onClose={() => { setShowAIPrompt(false); setRubricPromptContext(null); }}
           />
         )}
       </AnimatePresence>

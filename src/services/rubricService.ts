@@ -57,7 +57,7 @@ class RubricService {
         return response.data;
     }
 
-    async generateFromRubric(rubricId: number): Promise<{
+    async generateFromRubric(rubricId: number, file?: File, instructions?: string): Promise<{
         success: boolean;
         questions_generated: number;
         log: any;
@@ -67,7 +67,14 @@ class RubricService {
         all_questions?: any[];
     }> {
         const engine = localStorage.getItem('ai_engine_mode') || 'local';
-        const response = await api.post(`/generate/rubric/${rubricId}?engine=${engine}`);
+
+        const formData = new FormData();
+        formData.append('engine', engine);
+        if (file) formData.append('file', file);
+        if (instructions) formData.append('custom_prompt', instructions);
+
+        const response = await api.post(`/generate/rubric/${rubricId}`, formData);
+
         if (!response.data.success) {
             throw new Error(response.data.error || 'Generation failed');
         }

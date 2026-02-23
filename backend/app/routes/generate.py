@@ -69,6 +69,7 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
                     options=q_data.get('options', []),
                     correct_answer=str(q_data.get('correct_answer', '')), # Ensure string
                     explanation=q_data.get('explanation', ''),
+                    course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes', {}),
                     status="draft"
                 )
                 db.add(new_q)
@@ -110,21 +111,77 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
         return JSONResponse(status_code=500, content={"error": "Internal Server Error", "traceback": error_msg})
 
 
+from fastapi import UploadFile, File, Form
+import shutil
+import os
+
 @router.post("/rubric/{rubric_id}")
-def generate_from_rubric(rubric_id: int, engine: str = "local", db: Session = Depends(get_db)):
+async def generate_from_rubric(
+    rubric_id: int, 
+    engine: str = Form("local"),
+    file: UploadFile = File(None),
+    custom_prompt: str = Form(None),
+    db: Session = Depends(get_db)
+):
     """
     Generate exam questions based on a saved rubric
     Applies all rubric constraints including question types and LO distribution
+    Optionally includes file context and custom prompt instructions.
     """
     from ..services.generation_service import generation_service
     
+    context_text = None
+    if file:
+        try:
+            os.makedirs("temp", exist_ok=True)
+            file_path = f"temp/rubric_{file.filename}"
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            # Extract text
+            text = ""
+            MAX_CHARS = 50000 
+            _, ext = os.path.splitext(file_path)
+            
+            if ext.lower() == '.pdf':
+                from PyPDF2 import PdfReader
+                reader = PdfReader(file_path)
+                for page in reader.pages:
+                    text += page.extract_text() or ""
+                    if len(text) > MAX_CHARS:
+                        text = text[:MAX_CHARS]
+                        break
+            elif ext.lower() == '.docx':
+                from docx import Document
+                doc = Document(file_path)
+                for para in doc.paragraphs:
+                    text += para.text + "\n"
+                    if len(text) > MAX_CHARS:
+                        text = text[:MAX_CHARS]
+                        break
+            else:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    text = f.read(MAX_CHARS)
+                    
+            os.remove(file_path)
+            if text.strip():
+                context_text = text[:MAX_CHARS]
+        except Exception as e:
+            print(f"File extraction error in rubric gen: {e}")
+
     try:
-        result = generation_service.generate_from_rubric(rubric_id, db, engine=engine)
+        result = generation_service.generate_from_rubric(
+            rubric_id, 
+            db, 
+            engine=engine,
+            context_text=context_text,
+            custom_prompt=custom_prompt
+        )
         
         return {
             "success": result["success"],
             "questions_generated": result["questions_generated"],
-            "questions": result.get("questions", []),  # Ensure questions are passed to frontend
+            "questions": result.get("questions", []),
             "log":  result["log"],
             "message": f"Successfully generated {result['questions_generated']} questions"
         }
@@ -257,6 +314,7 @@ async def generate_from_file(
                 correct_answer=str(q_data.get('correct_answer', '')),
                 explanation=q_data.get('explanation', ''),
                 bloom_level=b_level,
+                course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes', {}),
                 status="draft"
             )
             db.add(new_q)

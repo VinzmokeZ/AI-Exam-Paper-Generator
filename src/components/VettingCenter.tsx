@@ -66,7 +66,7 @@ export function VettingCenter() {
   useEffect(() => {
     if (state?.questions) {
       setQuestions(state.questions);
-      setSelectedCOLevels(state.questions[0]?.courseOutcomes || defaultQuestions[0].courseOutcomes);
+      setSelectedCOLevels(state.questions[0]?.courseOutcomes || state.questions[0]?.course_outcomes || defaultQuestions[0].courseOutcomes);
     } else {
       // Fetch all pending questions from backend
       fetchPendingQuestions();
@@ -79,7 +79,7 @@ export function VettingCenter() {
       const pending = await vettingService.getDrafts();
       if (pending && pending.length > 0) {
         setQuestions(pending);
-        setSelectedCOLevels(pending[0].courseOutcomes || defaultQuestions[0].courseOutcomes);
+        setSelectedCOLevels(pending[0].courseOutcomes || pending[0].course_outcomes || defaultQuestions[0].courseOutcomes);
       } else {
         setQuestions([]);
       }
@@ -118,7 +118,7 @@ export function VettingCenter() {
       const nextIndex = currentIndex + 1;
       setCurrentIndex(nextIndex);
       setEditMode(false);
-      setSelectedCOLevels(questions[nextIndex]?.courseOutcomes || defaultQuestions[0].courseOutcomes);
+      setSelectedCOLevels(questions[nextIndex]?.courseOutcomes || questions[nextIndex]?.course_outcomes || defaultQuestions[0].courseOutcomes);
     }
   };
 
@@ -127,7 +127,7 @@ export function VettingCenter() {
       const prevIndex = currentIndex - 1;
       setCurrentIndex(prevIndex);
       setEditMode(false);
-      setSelectedCOLevels(questions[prevIndex]?.courseOutcomes || defaultQuestions[0].courseOutcomes);
+      setSelectedCOLevels(questions[prevIndex]?.courseOutcomes || questions[prevIndex]?.course_outcomes || defaultQuestions[0].courseOutcomes);
     }
   };
 
@@ -326,39 +326,57 @@ export function VettingCenter() {
             {/* MCQ Options */}
             {((currentQuestion.type === 'MCQ' || currentQuestion.question_type === 'MCQ') || currentQuestion.options) && (
               <div className="space-y-3 mb-6">
-                {currentQuestion.options?.map((option: any, index: any) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 + index * 0.05 }}
-                    className={`rounded-2xl p-4 border-3 ${(typeof currentQuestion.correctAnswer === 'number' ? index === currentQuestion.correctAnswer : option === currentQuestion.correct_answer || (currentQuestion.correct_answer && option && option.includes(currentQuestion.correct_answer)))
-                      ? 'bg-[#50FA7B]/20 border-[#50FA7B]'
-                      : 'bg-[#F5F1ED] border-[#E5DED6]'
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm ${(typeof currentQuestion.correctAnswer === 'number' ? index === currentQuestion.correctAnswer : option === currentQuestion.correct_answer || (currentQuestion.correct_answer && option && option.includes(currentQuestion.correct_answer)))
-                          ? 'bg-[#50FA7B] text-white'
-                          : 'bg-[#E5DED6] text-[#0A1F1F]'
-                          }`}
-                      >
-                        {String.fromCharCode(65 + index)}.
-                      </div>
-                      <span className="text-sm text-[#0A1F1F] flex-1">{option}</span>
-                      {(typeof currentQuestion.correctAnswer === 'number' ? index === currentQuestion.correctAnswer : option === currentQuestion.correct_answer || (currentQuestion.correct_answer && option && option.includes(currentQuestion.correct_answer))) && (
-                        <motion.div
-                          initial={{ scale: 0, rotate: -180 }}
-                          animate={{ scale: 1, rotate: 0 }}
-                          transition={{ type: 'spring', delay: 0.3 }}
+                {currentQuestion.options?.map((option: any, index: any) => {
+                  const isOptionCorrect = () => {
+                    if (typeof currentQuestion.correctAnswer === 'number') {
+                      return index === currentQuestion.correctAnswer;
+                    }
+                    if (!currentQuestion.correct_answer || !option) return false;
+                    const optStr = String(option).trim();
+                    const ansStr = String(currentQuestion.correct_answer).trim();
+
+                    if (optStr === ansStr) return true;
+                    if (optStr.startsWith(ansStr + '.') || optStr.startsWith(ansStr + ')')) return true;
+
+                    return false;
+                  };
+
+                  const correct = isOptionCorrect();
+
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 + index * 0.05 }}
+                      className={`rounded-2xl p-4 border-3 ${correct
+                        ? 'bg-[#50FA7B]/20 border-[#50FA7B]'
+                        : 'bg-[#F5F1ED] border-[#E5DED6]'
+                        }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-sm ${correct
+                            ? 'bg-[#50FA7B] text-white'
+                            : 'bg-[#E5DED6] text-[#0A1F1F]'
+                            }`}
                         >
-                          <CheckCircle2 className="w-5 h-5 text-[#50FA7B]" />
-                        </motion.div>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                          {String.fromCharCode(65 + index)}.
+                        </div>
+                        <span className="text-sm text-[#0A1F1F] flex-1">{option}</span>
+                        {correct && (
+                          <motion.div
+                            initial={{ scale: 0, rotate: -180 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            transition={{ type: 'spring', delay: 0.3 }}
+                          >
+                            <CheckCircle2 className="w-5 h-5 text-[#50FA7B]" />
+                          </motion.div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )
+                })}
               </div>
             )}
 
@@ -418,12 +436,10 @@ export function VettingCenter() {
                   </div>
                   <span className="text-sm font-semibold text-[#0A1F1F]">{co.label}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-[#8B9E9E]">Level {level}</span>
-                </div>
               </div>
             );
           })}
+
           {(!selectedCOLevels || Object.values(selectedCOLevels).every(v => !v)) && (
             <div className="p-6 text-center text-xs text-[#8B9E9E] italic">
               No explicit CO mapping found for this question.
@@ -432,28 +448,65 @@ export function VettingCenter() {
         </div>
       </div>
 
-      {/* Actions - RED/GREEN Buttons */}
+      {/* Actions - RED/GREEN Buttons & Navigation */}
       <div className="mx-6 mb-24 relative z-10">
-        <div className="flex gap-4">
+        <div className="flex gap-4 items-center justify-center">
+
+          {/* Previous Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handlePrevious}
+            disabled={currentIndex === 0}
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 shadow-md transition-colors ${currentIndex === 0
+              ? 'bg-white/10 border-white/20 text-[#8B9E9E]/50 cursor-not-allowed'
+              : 'bg-[#0A1F1F] border-[#1A3F3F] text-white hover:bg-[#0D2626]'
+              }`}
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </motion.button>
+
+          {/* Reject */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleReject}
-            className="flex-1 bg-[#FF6AC1] text-white rounded-[24px] py-6 font-black text-lg shadow-xl border-4 border-[#FF6AC1]/50 flex flex-col items-center justify-center gap-1"
+            className={`flex-1 flex flex-col items-center justify-center gap-1 rounded-[24px] py-4 font-black transition-all border-4 shadow-xl ${vettedQuestions[currentQuestion.id] === 'rejected'
+              ? 'bg-[#FF6AC1] text-white border-[#FF6AC1]'
+              : 'bg-white text-[#FF6AC1] border-[#E5DED6] hover:border-[#FF6AC1]/50'
+              }`}
           >
-            <X className="w-8 h-8" strokeWidth={3} />
-            <span className="text-xs opacity-80 uppercase tracking-widest">Reject</span>
+            <X className="w-6 h-6" strokeWidth={3} />
+            <span className="text-[10px] uppercase tracking-widest hidden sm:block">Reject</span>
           </motion.button>
 
+          {/* Approve */}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleApprove}
-            className="flex-1 bg-[#50FA7B] text-[#0A1F1F] rounded-[24px] py-6 font-black text-lg shadow-xl border-4 border-[#50FA7B]/50 flex flex-col items-center justify-center gap-1"
+            className={`flex-1 flex flex-col items-center justify-center gap-1 rounded-[24px] py-4 font-black transition-all border-4 shadow-xl ${vettedQuestions[currentQuestion.id] === 'approved'
+              ? 'bg-[#50FA7B] text-[#0A1F1F] border-[#50FA7B]'
+              : 'bg-white text-[#50FA7B] border-[#E5DED6] hover:border-[#50FA7B]/50'
+              }`}
           >
-            <Check className="w-8 h-8" strokeWidth={3} />
-            <span className="text-xs opacity-60 uppercase tracking-widest">Approve</span>
+            <Check className="w-6 h-6" strokeWidth={3} />
+            <span className="text-[10px] uppercase tracking-widest hidden sm:block">Approve</span>
           </motion.button>
+
+          {/* Next Button */}
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={currentIndex === questions.length - 1 ? handleComplete : handleNext}
+            className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 shadow-md transition-colors ${currentIndex === questions.length - 1
+              ? 'bg-[#C5B3E6] border-[#9B86C5] text-[#0A1F1F]'
+              : 'bg-[#0A1F1F] border-[#1A3F3F] text-white hover:bg-[#0D2626]'
+              }`}
+          >
+            {currentIndex === questions.length - 1 ? <CheckCircle2 className="w-6 h-6" /> : <ChevronRight className="w-6 h-6" />}
+          </motion.button>
+
         </div>
       </div>
     </div >
