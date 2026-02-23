@@ -300,7 +300,7 @@ class GenerationService:
             
         return result
 
-    def generate_questions_from_text(self, context_text, subject_name, topic_name, count=5, complexity="Balanced", engine="local", custom_prompt=None):
+    def generate_questions_from_text(self, context_text, subject_name, topic_name, count=5, complexity="Balanced", engine="local", custom_prompt=None, fresh=False):
         """
         Generate questions directly from provided text (file content), skipping RAG lookup.
         """
