@@ -147,13 +147,14 @@ class RAGService:
         try:
             if not self.collection:
                 print("[RAG] ⚠️ Local collection not found. Skipping local query.")
-                return None
+                return self.fetch_wikipedia_context(query) # Skip to wiki immediately
+
             results = self.collection.query(
                 query_texts=[query],
                 n_results=n_results,
                 where=filter_dict
             )
-            if results['documents'] and len(results['documents']) > 0 and len(results['documents'][0]) > 0:
+            if results and 'documents' in results and len(results['documents']) > 0 and len(results['documents'][0]) > 0:
                 print(f"[RAG] 📚 Found {len(results['documents'][0])} local chunks for {query}")
                 return results['documents'][0]
         except Exception as e:
@@ -164,7 +165,7 @@ class RAGService:
         if wiki_context:
             return wiki_context
             
-        return ["No specific context found for this topic. Use general knowledge."]
+        return []
 
 # rag_service = RAGService()
 # Global instance (initialized lazily)

@@ -13,7 +13,14 @@ class GenerationService:
         openai_key = os.getenv("OPENAI_API_KEY")
         gemini_key = os.getenv("GOOGLE_API_KEY")
         
-        if openai_key and len(openai_key) > 5:
+        if gemini_key and len(gemini_key) > 5 and ("gemini" in os.getenv("OPENAI_MODEL", "").lower() or "google" in os.getenv("OPENAI_MODEL", "").lower()):
+            self.provider = "gemini"
+            self.cloud_client = OpenAI(
+                api_key=gemini_key,
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+            )
+            self.cloud_model = os.getenv("OPENAI_MODEL", "gemini-1.5-flash")
+        elif openai_key and len(openai_key) > 5:
             self.provider = "openai"
             self.cloud_client = OpenAI(
                 api_key=openai_key,
@@ -22,12 +29,10 @@ class GenerationService:
             self.cloud_model = os.getenv("OPENAI_MODEL", "gpt-4o")
         elif gemini_key and len(gemini_key) > 5:
             self.provider = "gemini"
-            # Gemini OpenAI-Compatible Endpoint
             self.cloud_client = OpenAI(
                 api_key=gemini_key,
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
             )
-            # Default to gemini-1.5-flash for maximum speed unless overridden
             self.cloud_model = os.getenv("OPENAI_MODEL", "gemini-1.5-flash")
         else:
             self.provider = "none"
@@ -263,7 +268,10 @@ class GenerationService:
             try:
                 rag_service = get_rag_service()
                 context_list = rag_service.query_context(f"Questions about {topic_name}", subject_id=query_id)
-                context_text = chr(10).join(context_list)
+                if context_list and isinstance(context_list, list):
+                    context_text = chr(10).join(context_list)
+                else:
+                    context_text = f"Topic: {topic_name}"
             except Exception as e:
                 print(f"[RAG] Warning: RAG failed {e}. Proceeding with prompt only.")
                 context_text = f"Topic: {topic_name}"
