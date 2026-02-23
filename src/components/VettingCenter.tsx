@@ -152,7 +152,7 @@ export function VettingCenter() {
 
     // 1. Save approved questions via Bulk Save (handles History creation too)
     try {
-      const { generationService, gamificationService } = await import('../services/api');
+      const { generationService } = await import('../services/api');
 
       const payloadSubject = state?.subjectName || currentQuestion.subject_name || currentQuestion.subject || 'General';
       const payloadTopic = state?.topicName || currentQuestion.topic_name || 'AI Generated';
@@ -170,8 +170,6 @@ export function VettingCenter() {
         return;
       }
 
-      // 2. Reward user
-      await gamificationService.addXP(1, approved.length * 10);
       toast.success("Exam Saved! Opening Preview...");
 
       // 3. Show Structure Preview
@@ -248,8 +246,10 @@ export function VettingCenter() {
               </Link>
               <div>
                 <h1 className="text-xl font-bold text-[#0A1F1F]">Vetting</h1>
-                <p className="text-[10px] text-[#0A1F1F] opacity-70 font-bold uppercase tracking-widest truncate max-w-[150px]">
-                  {state?.topicName || currentQuestion.topic_name || (currentIndex + 1 + ' of ' + totalQuestions)}
+                <p className="text-[10px] text-[#0A1F1F] opacity-70 font-bold uppercase tracking-widest truncate max-w-[200px] flex items-center gap-1.5">
+                  <span>{state?.topicName || currentQuestion.topic_name || "AI GENERATED"}</span>
+                  <span className="opacity-40">•</span>
+                  <span className="text-[#0D2626] font-black">{currentIndex + 1} OF {totalQuestions}</span>
                 </p>
               </div>
             </div>
