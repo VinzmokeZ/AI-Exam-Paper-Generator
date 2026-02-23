@@ -83,15 +83,13 @@ def get_db():
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    ensure_schema_sync()
+    try:
+        from .schema_sync import ensure_schema_sync
+        ensure_schema_sync(engine)
+    except Exception as e:
+        print(f"[DB] ⚠️ Schema sync skipped: {e}")
     seed_defaults()
 
-def ensure_schema_sync():
-    """
-    Schema sync disabled to prevent deployment race conditions with Render.
-    Reverted to stable db schema.
-    """
-    pass
 
 def seed_defaults():
     from .models import Subject, Topic, Achievement
