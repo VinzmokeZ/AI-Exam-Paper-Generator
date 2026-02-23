@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import Subject
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 router = APIRouter()
@@ -13,7 +13,7 @@ class SubjectBase(BaseModel):
     code: str
     color: str
     gradient: str
-    introduction: str
+    introduction: Optional[str] = None
 
 class SubjectCreate(SubjectBase):
     pass

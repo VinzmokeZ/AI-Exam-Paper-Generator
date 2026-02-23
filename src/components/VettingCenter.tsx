@@ -245,11 +245,14 @@ export function VettingCenter() {
                 </motion.div>
               </Link>
               <div>
-                <h1 className="text-xl font-bold text-[#0A1F1F]">Vetting</h1>
-                <p className="text-[10px] text-[#0A1F1F] opacity-70 font-bold uppercase tracking-widest truncate max-w-[200px] flex items-center gap-1.5">
-                  <span>{state?.topicName || currentQuestion.topic_name || "AI GENERATED"}</span>
-                  <span className="opacity-40">•</span>
-                  <span className="text-[#0D2626] font-black">{currentIndex + 1} OF {totalQuestions}</span>
+                <div className="flex items-baseline gap-3">
+                  <h1 className="text-xl font-bold text-[#0A1F1F]">Vetting</h1>
+                  <span className="text-sm font-black text-[#0A1F1F] opacity-50 bg-white/20 px-2 py-0.5 rounded-full">
+                    {currentIndex + 1} / {totalQuestions}
+                  </span>
+                </div>
+                <p className="text-[10px] text-[#0A1F1F] opacity-70 font-bold uppercase tracking-widest truncate max-w-[200px]">
+                  {state?.topicName || currentQuestion.topic_name || "AI GENERATED"}
                 </p>
               </div>
             </div>
