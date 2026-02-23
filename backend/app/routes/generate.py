@@ -15,6 +15,13 @@ class GenerateRequest(BaseModel):
     engine: str = "local"
     custom_prompt: str = None
 
+class BulkSaveRequest(BaseModel):
+    subject_name: str
+    topic_name: str
+    questions: List[dict]
+    marks: int = None
+    duration: int = 60
+
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models import Question, Topic, Subject
@@ -34,74 +41,11 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
             request.custom_prompt
         )
 
-        # 2. Resolve Subject & Topic for DB Association
-        # Try to find subject by ID or Code
-        subject = None
-        if request.subject_id and str(request.subject_id).isdigit():
-             subject = db.query(Subject).filter(Subject.id == int(request.subject_id)).first()
-        elif request.subject_id:
-             subject = db.query(Subject).filter(Subject.code == request.subject_id).first()
-        
-        if not subject:
-            # Fallback: Find by name or create default? 
-            # For now, let's try to find by name strictly
-            subject = db.query(Subject).filter(Subject.name == request.subject_name).first()
-        
-        if subject:
-            # Resolve Topic
-            topic = db.query(Topic).filter(Topic.subject_id == subject.id, Topic.name == request.topic_name).first()
-            if not topic:
-                # Create Topic if it doesn't exist (e.g. "General Topic")
-                topic = Topic(subject_id=subject.id, name=request.topic_name, has_syllabus=False)
-                db.add(topic)
-                db.commit()
-                db.refresh(topic)
-                
-            # 3. Save Questions to DB
-            stored_questions = []
-            for q_data in generated_data:
-                # Ensure we have a valid bloom_level
-                b_level = q_data.get('bloom_level', request.blooms_level)
-                if isinstance(b_level, dict): b_level = "Mixed"
-                
-                new_q = Question(
-                    topic_id=topic.id,
-                    question_text=q_data.get('question_text') or q_data.get('question', ''),
-                    question_type=q_data.get('question_type') or q_data.get('type') or 'MCQ',
-                    options=q_data.get('options', []),
-                    correct_answer=str(q_data.get('correct_answer', '')), # Ensure string
-                    explanation=q_data.get('explanation', ''),
-                    course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes', {}),
-                    status="draft"
-                )
-                db.add(new_q)
-                stored_questions.append(new_q)
+        # 2. Add temporary IDs for frontend pairing
+        import uuid
+        for q in generated_data:
+            q['id'] = str(uuid.uuid4())
             
-            db.commit()
-            
-            # Return the stored objects (with IDs) converted to dicts/schema if needed
-            # Or just return the generated data with IDs appended?
-            for i, q in enumerate(stored_questions):
-                db.refresh(q)
-                generated_data[i]['id'] = q.id
-            
-            # 4. Log to Exam History and Activity
-            from ..models import ExamHistory
-            new_history = ExamHistory(
-                subject_name=subject.name,
-                topic_name=request.topic_name,
-                questions_count=len(stored_questions),
-                marks=sum(q.get('marks', 5) for q in generated_data),
-                duration=60, # Default
-                questions=[q.question_text for q in stored_questions] # Store just text or full dict? Model says JSON.
-            )
-            db.add(new_history)
-            
-            from ..services.logging_service import logging_service
-            logging_service.log_activity(db, "Exam Generated", details={"subject": subject.name, "count": len(stored_questions)})
-            
-            db.commit()
-
         return generated_data
 
     except Exception as e:
@@ -302,44 +246,10 @@ async def generate_from_file(
             custom_prompt=custom_prompt
         )
         
-        # --- SAVE TO DATABASE ---
-        stored_questions = []
-        for q_data in generated_data:
-            b_level = q_data.get('bloom_level', complexity)
-            if isinstance(b_level, dict): b_level = "Mixed"
-            
-            new_q = Question(
-                topic_id=topic.id,
-                question_text=q_data.get('question_text') or q_data.get('question', ''),
-                question_type=q_data.get('question_type') or q_data.get('type') or 'MCQ',
-                options=q_data.get('options', []),
-                correct_answer=str(q_data.get('correct_answer', '')),
-                explanation=q_data.get('explanation', ''),
-                bloom_level=b_level,
-                course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes', {}),
-                status="draft"
-            )
-            db.add(new_q)
-            stored_questions.append(new_q)
-        
-        db.commit()
-        
-        for i, q in enumerate(stored_questions):
-            db.refresh(q)
-            generated_data[i]['id'] = q.id
-            
-        # Log History
-        from ..models import ExamHistory
-        new_history = ExamHistory(
-            subject_name=subject.name,
-            topic_name=topic.name,
-            questions_count=len(stored_questions),
-            marks=sum(q.get('marks', 5) for q in generated_data),
-            duration=60,
-            questions=[q.get('question_text') or q.get('question', '') for q in generated_data]
-        )
-        db.add(new_history)
-        db.commit()
+        # Add temporary IDs for frontend pairing
+        import uuid
+        for q in generated_data:
+            q['id'] = str(uuid.uuid4())
 
         return generated_data
 
@@ -347,7 +257,85 @@ async def generate_from_file(
         import traceback
         error_msg = traceback.format_exc()
         print(f"File Generation Error: {error_msg}")
-        # Return DB-saved questions if we have them, even if logging failed? 
-        # For now, standard error response
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=500, content={"error": str(e), "trace": error_msg})
+
+@router.post("/bulk-save")
+def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db)):
+    """
+    Saves a batch of approved questions and creates an exam history record.
+    This is called AFTER vetting to ensure only approved content is persisted.
+    """
+    try:
+        from ..models import Subject, Topic, Question, ExamHistory
+        from ..services.logging_service import logging_service
+        
+        # 1. Resolve Subject
+        subject = db.query(Subject).filter(Subject.name == request.subject_name).first()
+        if not subject:
+            # Create a default subject if it doesn't exist
+            subject = Subject(
+                name=request.subject_name,
+                code=request.subject_name[:5].upper(),
+                color="#50FA7B",
+                gradient="from-[#50FA7B] to-[#0A1F1F]"
+            )
+            db.add(subject)
+            db.commit()
+            db.refresh(subject)
+            
+        # 2. Resolve Topic
+        topic = db.query(Topic).filter(Topic.subject_id == subject.id, Topic.name == request.topic_name).first()
+        if not topic:
+            topic = Topic(subject_id=subject.id, name=request.topic_name, has_syllabus=False)
+            db.add(topic)
+            db.commit()
+            db.refresh(topic)
+            
+        # 3. Save Questions
+        stored_questions_data = []
+        for q_data in request.questions:
+            new_q = Question(
+                topic_id=topic.id,
+                rubric_id=q_data.get('rubric_id'),
+                question_text=q_data.get('question_text') or q_data.get('question', ''),
+                question_type=q_data.get('question_type') or q_data.get('type') or 'MCQ',
+                options=q_data.get('options', []),
+                correct_answer=str(q_data.get('correct_answer', '')),
+                explanation=q_data.get('explanation', ''),
+                bloom_level=q_data.get('bloom_level') or q_data.get('complexity', 'Apply'),
+                course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes', {}),
+                status="approved"
+            )
+            db.add(new_q)
+            stored_questions_data.append({
+                "question_text": new_q.question_text,
+                "type": new_q.question_type,
+                "marks": q_data.get('marks', 5)
+            })
+            
+        db.commit()
+        
+        # 4. Create History
+        total_marks = sum(q.get('marks', 5) for q in request.questions)
+        new_history = ExamHistory(
+            subject_name=subject.name,
+            topic_name=request.topic_name,
+            questions_count=len(request.questions),
+            marks=total_marks,
+            duration=request.duration,
+            questions=[q.get('question_text') or q.get('question', '') for q in request.questions]
+        )
+        db.add(new_history)
+        
+        # 5. Log Activity
+        logging_service.log_activity(db, "Exam Vetted & Saved", details={"subject": subject.name, "count": len(request.questions)})
+        
+        db.commit()
+        
+        return {"success": True, "message": f"Saved {len(request.questions)} questions to history."}
+        
+    except Exception as e:
+        db.rollback()
+        import traceback
+        return JSONResponse(status_code=500, content={"error": str(e), "trace": traceback.format_exc()})

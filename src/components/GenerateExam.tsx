@@ -540,6 +540,7 @@ export function GenerateExam() {
               state: {
                 questions: generatedQuestions,
                 subjectName: state?.subjectName || selectedSubject,
+                topicName: prompt || 'AI Generated Exam',
                 rubricName: savedRubrics.find(r => r.id === selectedRubric)?.name
               }
             })}

@@ -441,6 +441,16 @@ export const generationService = {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return response.data;
+    },
+    bulkSave: async (subject: string, topic: string, questions: any[], duration: number = 60) => {
+        const payload = {
+            subject_name: subject,
+            topic_name: topic,
+            questions: questions,
+            duration: duration
+        };
+        const response = await api.post('/generate/bulk-save', payload);
+        return response.data;
     }
 };
 

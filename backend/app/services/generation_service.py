@@ -494,8 +494,8 @@ class GenerationService:
                          "explanation": q.get('explanation', ''),
                          "marks": q.get('marks', 5),
                          "bloom_level": q.get('bloom_level', 'Application'),
-                         "course_outcome": q.get('course_outcome', 'CO1'),
-                         "learning_outcome": q.get('learning_outcome', 'LO1'),
+                         "course_outcomes": q.get('courseOutcomes') or q.get('course_outcomes', {}),
+                         "learning_outcome": task['learning_outcome'],
                          "status": 'draft'
                     }
                     all_questions.append(q_obj)
@@ -507,34 +507,11 @@ class GenerationService:
         if not all_questions:
              raise Exception("Failed to generate any questions after all task attempts. Please check your AI API keys and model settings.")
 
-        # Save all to DB in one transaction (Safe for SQLite WAL)
-        try:
-            db_questions = []
-            for q_data in all_questions:
-                db_q = Question(**q_data)
-                db.add(db_q)
-                db_questions.append(db_q)
-            
-            db.commit()
-            
-            # Refresh to get IDs and create clean dicts
-            clean_questions = []
-            for i, q in enumerate(db_questions):
-                db.refresh(q)
-                clean_q = all_questions[i].copy()
-                clean_q['id'] = q.id
-                clean_questions.append(clean_q)
-                
-            return {
-                "success": True,
-                "questions_generated": len(db_questions),
-                "questions": clean_questions,
-                "log": generation_log
-            }
-            
-        except Exception as e:
-            print(f"[DB] Save Error: {e}")
-            db.rollback()
-            raise e
+        return {
+            "success": True,
+            "questions_generated": len(all_questions),
+            "questions": all_questions,
+            "log": generation_log
+        }
 
 generation_service = GenerationService()

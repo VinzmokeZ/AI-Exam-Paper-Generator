@@ -1,0 +1,44 @@
+
+[ERROR] Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}
+Traceback (most recent call last):
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\app\services\generation_service.py", line 183, in _generate_questions_core
+    response = client.chat.completions.create(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\openai\_utils\_utils.py", line 279, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\openai\resources\chat\completions.py", line 859, in create
+    return self._post(
+           ^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\openai\_base_client.py", line 1283, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\openai\_base_client.py", line 960, in request
+    return self._request(
+           ^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\openai\_base_client.py", line 1064, in _request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}
+
+
+[ERROR] Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}
+Traceback (most recent call last):
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\app\services\generation_service.py", line 183, in _generate_questions_core
+    response = client.chat.completions.create(
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\openai\_utils\_utils.py", line 279, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\openai\resources\chat\completions.py", line 859, in create
+    return self._post(
+           ^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\openai\_base_client.py", line 1283, in post
+    return cast(ResponseT, self.request(cast_to, opts, stream=stream, stream_cls=stream_cls))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\openai\_base_client.py", line 960, in request
+    return self._request(
+           ^^^^^^^^^^^^^^
+  File "C:\Users\Vinz\Downloads\Internship Project\ai_exam_oracle\frontend\AI Exam Paper Generator\backend\venv\Lib\site-packages\openai\_base_client.py", line 1064, in _request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}
+

@@ -150,29 +150,25 @@ export function VettingCenter() {
       return;
     }
 
-    // 1. Update statuses in backend
+    // 1. Save approved questions via Bulk Save (handles History creation too)
     try {
-      const { vettingService, gamificationService } = await import('../services/api');
-      await Promise.all([
-        ...approved.map(q => vettingService.updateStatus(q.id, 'approved')),
-        ...rejected.map(q => vettingService.updateStatus(q.id, 'rejected'))
-      ]);
+      const { generationService, gamificationService } = await import('../services/api');
 
-      // 2. Create history record (Silent Save)
-      await historyService.saveHistory({
-        subject_name: state?.subjectName || currentQuestion.subject_name || currentQuestion.subject || 'General',
-        topic_name: state?.topicName || currentQuestion.topic_name || 'AI Generated',
-        questions_count: approved.length,
-        marks: approved.reduce((acc, q) => acc + (q.marks || 5), 0),
-        duration: state?.duration || 60,
-        questions: approved.map(q => ({ ...q, status: 'approved' }))
-      });
+      const payloadSubject = state?.subjectName || currentQuestion.subject_name || currentQuestion.subject || 'General';
+      const payloadTopic = state?.topicName || currentQuestion.topic_name || 'AI Generated';
 
-      // 3. Reward user
+      await generationService.bulkSave(
+        payloadSubject,
+        payloadTopic,
+        approved,
+        state?.duration || 60
+      );
+
+      // 2. Reward user
       await gamificationService.addXP(1, approved.length * 10);
       toast.success("Exam Saved! Opening Preview...");
 
-      // 4. Show Structure Preview
+      // 3. Show Structure Preview
       setShowStructurePreview(true);
 
     } catch (error) {
