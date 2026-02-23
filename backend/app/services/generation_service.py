@@ -252,7 +252,7 @@ class GenerationService:
         # No fallback list allowed anymore. If we fail, we raise the error so the user knows.
         raise Exception(f"Failed to generate valid questions after {max_retries} attempts. The AI model may be overloaded or the context is too complex.")
 
-    def generate_questions(self, subject_name, topic_name, blooms_level, count=5, subject_id=None, rubric=None, engine="local"):
+    def generate_questions(self, subject_name, topic_name, blooms_level, count=5, subject_id=None, rubric=None, engine="local", custom_prompt=None):
         # Check Cache First for Speed
         cache_key = self._get_cache_key(subject_name, topic_name, blooms_level, rubric)
         cache_file = os.path.join(self.cache_dir, f"{cache_key}.json")
@@ -288,7 +288,7 @@ class GenerationService:
         
         
         # Generate using shared core logic
-        result = self._generate_questions_core(context_text, subject_name, topic_name, blooms_level, count, rubric, engine)
+        result = self._generate_questions_core(context_text, subject_name, topic_name, blooms_level, count, rubric, engine, custom_prompt=custom_prompt)
         
         # Cache result
         with open(cache_file, "w") as f:
@@ -459,7 +459,8 @@ class GenerationService:
                         blooms_level="Apply", 
                         count=task['count'],
                         rubric=None, 
-                        engine=engine
+                        engine=engine,
+                        custom_prompt=custom_prompt
                     ), task
             except Exception as e:
                 print(f"[THREAD] Error: {e}")

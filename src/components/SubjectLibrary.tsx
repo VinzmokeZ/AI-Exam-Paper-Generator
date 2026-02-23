@@ -573,7 +573,7 @@ export function SubjectLibrary() {
                   onClose={() => setShowGenerateModal(false)}
                   subjectId={selectedSubjectForGen?.id.toString()}
                   subjectName={selectedSubjectForGen?.name}
-                  engine="gemini" // Default to cloud for smart generation
+                  engine={localStorage.getItem('ai_engine_mode') || 'cloud'} // Respect user choice or fallback to cloud
                 />
               </div>
             </motion.div>

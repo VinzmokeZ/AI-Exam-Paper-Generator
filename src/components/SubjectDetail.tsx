@@ -646,7 +646,7 @@ export function SubjectDetail() {
                   onClose={() => setShowGenerateModal(false)}
                   subjectId={id}
                   subjectName={subjectName}
-                  engine="gemini"
+                  engine={localStorage.getItem('ai_engine_mode') || 'cloud'}
                 // Passing the topic name as a pre-filled prompt if a topic is selected
                 // To pre-fill AIPromptBox, I might need to add a 'initialPrompt' prop to it
                 />

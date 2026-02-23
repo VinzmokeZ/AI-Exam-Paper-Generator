@@ -13,6 +13,7 @@ class GenerateRequest(BaseModel):
     count: int = 5
     rubric: dict = None
     engine: str = "local"
+    custom_prompt: str = None
 
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -29,7 +30,8 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
             request.count,
             request.subject_id,
             request.rubric,
-            request.engine
+            request.engine,
+            request.custom_prompt
         )
 
         # 2. Resolve Subject & Topic for DB Association

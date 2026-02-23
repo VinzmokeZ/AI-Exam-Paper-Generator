@@ -82,7 +82,13 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, 
         if (generatedQuestions && generatedQuestions.length > 0) {
           setIsSuccess(true);
           setTimeout(() => {
-            navigate('/vetting', { state: { questions: generatedQuestions } });
+            navigate('/vetting', {
+              state: {
+                questions: generatedQuestions,
+                subjectName: subjectName || "General",
+                topicName: prompt || "AI Generated"
+              }
+            });
             if (onClose) onClose();
           }, 2000);
         } else {
