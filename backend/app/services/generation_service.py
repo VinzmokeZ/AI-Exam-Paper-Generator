@@ -1,6 +1,7 @@
 import os
 from openai import OpenAI
 import json
+import time
 from .rag_service import get_rag_service
 class GenerationService:
     def __init__(self, ignore_cache=False):
@@ -65,11 +66,13 @@ class GenerationService:
         self.cache_dir = "backend_cache"
         os.makedirs(self.cache_dir, exist_ok=True)
 
-    def _get_cache_key(self, subject, topic, level, rubric=None):
+    def _get_cache_key(self, subject, topic, level, rubric=None, salt=None):
         import hashlib
         key_str = f"{subject}_{topic}_{level}".lower().replace(" ", "")
         if rubric:
             key_str += str(rubric)
+        if salt:
+            key_str += str(salt)
         return hashlib.md5(key_str.encode()).hexdigest()
 
 
@@ -133,7 +136,7 @@ class GenerationService:
         - 1-2: Low relevance/indirectly related.
         - 3-4: Moderately relevant.
         - 5: Highly relevant/primary focus.
-        DO NOT use the same static mapping for all questions. Each question must reflect its own specific content.
+        CRITICAL: DO NOT use the same static mapping for all questions. Each question MUST reflect its own specific content and Bloom's level.
         
         VETTING REQUIREMENT:
         - MCQ questions MUST have exactly 4 options.
@@ -252,9 +255,10 @@ class GenerationService:
         # No fallback list allowed anymore. If we fail, we raise the error so the user knows.
         raise Exception(f"Failed to generate valid questions after {max_retries} attempts. The AI model may be overloaded or the context is too complex.")
 
-    def generate_questions(self, subject_name, topic_name, blooms_level, count=5, subject_id=None, rubric=None, engine="local", custom_prompt=None):
+    def generate_questions(self, subject_name, topic_name, blooms_level, count=5, subject_id=None, rubric=None, engine="local", custom_prompt=None, fresh=False):
         # Check Cache First for Speed
-        cache_key = self._get_cache_key(subject_name, topic_name, blooms_level, rubric)
+        salt = str(time.time()) if fresh else None
+        cache_key = self._get_cache_key(subject_name, topic_name, blooms_level, rubric, salt=salt)
         cache_file = os.path.join(self.cache_dir, f"{cache_key}.json")
         
         if os.path.exists(cache_file) and not self.ignore_cache:
@@ -311,7 +315,7 @@ class GenerationService:
             custom_prompt=custom_prompt
         )
 
-    def generate_from_rubric(self, rubric_id, db, engine="local", context_text=None, custom_prompt=None):
+    def generate_from_rubric(self, rubric_id, db, engine="local", context_text=None, custom_prompt=None, fresh=False):
         """
         Generate exam questions based on rubric constraints using PARALLEL EXECUTION
         Distributes questions across learning outcomes and question types
@@ -444,7 +448,8 @@ class GenerationService:
                         count=task['count'],
                         complexity="Balanced",
                         engine=engine,
-                        custom_prompt=task_prompt
+                        custom_prompt=task_prompt,
+                        fresh=fresh # Pass the fresh flag
                     ), task
                 else:
                     # Using RAG or topic-based generation where prompt = topic_name internally
@@ -456,11 +461,12 @@ class GenerationService:
                     return self.generate_questions(
                         subject_name=subject.name,
                         topic_name=final_topic,
-                        blooms_level="Apply", 
+                        blooms_level="Apply",
                         count=task['count'],
-                        rubric=None, 
+                        rubric=None,
                         engine=engine,
-                        custom_prompt=custom_prompt
+                        custom_prompt=custom_prompt,
+                        fresh=fresh # Pass the fresh flag
                     ), task
             except Exception as e:
                 print(f"[THREAD] Error: {e}")

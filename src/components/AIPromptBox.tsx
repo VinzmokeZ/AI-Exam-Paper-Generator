@@ -29,6 +29,7 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, 
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileStatus, setFileStatus] = useState<'idle' | 'uploading' | 'ready'>('idle');
+  const [generatedData, setGeneratedData] = useState<any[] | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -41,9 +42,7 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, 
 
   const handleGenerate = async () => {
     if (prompt.trim() || selectedFile) {
-      // If parent component provided a handler, use it instead of internal logic
       if (onGenerate) {
-        // Pass engine and file state properly
         onGenerate(prompt, engine, selectedFile);
         return;
       }
@@ -55,7 +54,6 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, 
         let generatedQuestions;
 
         if (selectedFile) {
-          // File-based generation (Now supports mixed dual prompts)
           setFileStatus('uploading');
           generatedQuestions = await generationService.uploadGenerationFile(
             selectedFile,
@@ -63,11 +61,11 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, 
             complexity,
             engine,
             subjectId,
-            undefined, // topicId
-            prompt.trim() !== '' ? prompt : undefined // Pass the prompt!
+            undefined,
+            prompt.trim() !== '' ? prompt : undefined,
+            true
           );
         } else {
-          // Normal prompt generation
           generatedQuestions = await generationService.generateQuestions(
             subjectName || "General",
             prompt,
@@ -75,11 +73,13 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, 
             parseInt(prompt.match(/\d+/)?.[0] || '5'),
             subjectId,
             undefined,
-            engine
+            engine,
+            true
           );
         }
 
         if (generatedQuestions && generatedQuestions.length > 0) {
+          setGeneratedData(generatedQuestions);
           setIsSuccess(true);
           setTimeout(() => {
             navigate('/vetting', {
@@ -106,9 +106,16 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, 
   };
 
   const handleVetNow = () => {
-    // This function is now redundant as navigation happens automatically on success, 
-    // but kept if we want a manual trigger from the success screen.
-    // Ideally, the success screen should just be a transition state.
+    if (generatedData) {
+      navigate('/vetting', {
+        state: {
+          questions: generatedData,
+          subjectName: subjectName || "General",
+          topicName: prompt || "AI Generated"
+        }
+      });
+      if (onClose) onClose();
+    }
   };
 
   const handleSuggestionClick = (suggestion: string) => {

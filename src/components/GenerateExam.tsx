@@ -229,6 +229,7 @@ export function GenerateExam() {
 
     setGenerationStep('progress');
     setProgress(0);
+    setGeneratedQuestions([]); // Explicitly clear old questions
     setCurrentStatus('AI Processing Context...');
 
     // Determine effective engine
@@ -279,7 +280,8 @@ export function GenerateExam() {
           parseInt(prompt.match(/\d+/)?.[0] || '5'), // Extract count from prompt or default to 5
           subject.id.toString(),
           undefined,
-          effectiveEngine
+          effectiveEngine,
+          true // Always fresh as requested
         );
       }
 
@@ -534,13 +536,25 @@ export function GenerateExam() {
           </p>
 
           <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              setGeneratedQuestions([]);
+              setGenerationStep('selecting');
+            }}
+            className="w-full py-3 text-[#0A1F1F]/40 font-bold uppercase tracking-widest mb-4 hover:text-[#0A1F1F]/60 transition-colors"
+          >
+            Clear All & Start Over
+          </motion.button>
+
+          <motion.button
             whileHover={{ scale: 1.05, y: -5 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => navigate('/vetting', {
               state: {
                 questions: generatedQuestions,
                 subjectName: state?.subjectName || selectedSubject,
-                topicName: prompt || 'AI Generated Exam',
+                topicName: 'AI Generated Exam',
                 rubricName: savedRubrics.find(r => r.id === selectedRubric)?.name
               }
             })}

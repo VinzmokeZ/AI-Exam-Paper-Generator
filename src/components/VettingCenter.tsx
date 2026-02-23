@@ -164,6 +164,12 @@ export function VettingCenter() {
         state?.duration || 60
       );
 
+      if (approved.length === 0) {
+        toast.info("All questions rejected. Drafts cleared.");
+        navigate('/generate');
+        return;
+      }
+
       // 2. Reward user
       await gamificationService.addXP(1, approved.length * 10);
       toast.success("Exam Saved! Opening Preview...");

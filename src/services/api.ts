@@ -345,7 +345,7 @@ export const gamificationService = {
 };
 
 export const generationService = {
-    generateQuestions: async (subject: string, topic: string, level: string, count: number = 5, subjectId?: string, rubric?: any, engine: string = "local") => {
+    generateQuestions: async (subject: string, topic: string, level: string, count: number = 5, subjectId?: string, rubric?: any, engine: string = "local", fresh: boolean = false) => {
         try {
             const payload = {
                 subject_name: subject,
@@ -354,7 +354,8 @@ export const generationService = {
                 count: count,
                 subject_id: subjectId,
                 rubric: rubric,
-                engine: engine
+                engine: engine,
+                fresh: fresh
             };
 
             const response = await api.post('/generate/questions', payload, { timeout: AI_TIMEOUT });
@@ -427,7 +428,7 @@ export const generationService = {
             return mockQuestions;
         }
     },
-    uploadGenerationFile: async (file: File, count: number = 5, complexity: string = "Balanced", engine: string = "local", subjectId?: string, topicId?: string, customPrompt?: string) => {
+    uploadGenerationFile: async (file: File, count: number = 5, complexity: string = "Balanced", engine: string = "local", subjectId?: string, topicId?: string, customPrompt?: string, fresh: boolean = false) => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('count', count.toString());
@@ -436,6 +437,7 @@ export const generationService = {
         if (subjectId) formData.append('subject_id', subjectId);
         if (topicId) formData.append('topic_id', topicId);
         if (customPrompt) formData.append('custom_prompt', customPrompt);
+        if (fresh) formData.append('fresh', 'true');
 
         const response = await api.post('/generate/from-file', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }

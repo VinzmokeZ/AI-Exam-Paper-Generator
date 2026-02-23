@@ -14,6 +14,7 @@ class GenerateRequest(BaseModel):
     rubric: dict = None
     engine: str = "local"
     custom_prompt: str = None
+    fresh: bool = False
 
 class BulkSaveRequest(BaseModel):
     subject_name: str
@@ -38,7 +39,8 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
             request.subject_id,
             request.rubric,
             request.engine,
-            request.custom_prompt
+            request.custom_prompt,
+            request.fresh
         )
 
         # 2. Add temporary IDs for frontend pairing
@@ -67,6 +69,7 @@ async def generate_from_rubric(
     engine: str = Form("local"),
     file: UploadFile = File(None),
     custom_prompt: str = Form(None),
+    fresh: bool = Form(False),
     db: Session = Depends(get_db)
 ):
     """
@@ -121,7 +124,8 @@ async def generate_from_rubric(
             db, 
             engine=engine,
             context_text=context_text,
-            custom_prompt=custom_prompt
+            custom_prompt=custom_prompt,
+            fresh=fresh
         )
         
         return {
@@ -151,6 +155,7 @@ async def generate_from_file(
     subject_id: str = Form(None),
     topic_id: str = Form(None),
     custom_prompt: str = Form(None),
+    fresh: bool = Form(False),
     db: Session = Depends(get_db)
 ):
     """
@@ -243,7 +248,8 @@ async def generate_from_file(
             count=count,
             complexity=complexity,
             engine=engine,
-            custom_prompt=custom_prompt
+            custom_prompt=custom_prompt,
+            fresh=fresh
         )
         
         # Add temporary IDs for frontend pairing
@@ -292,6 +298,12 @@ def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db))
             db.commit()
             db.refresh(topic)
             
+        # 2.5 If no questions approved, just clear drafts and exit
+        if not request.questions:
+            db.query(Question).filter(Question.status == "draft").delete()
+            db.commit()
+            return {"success": True, "message": "All questions rejected. Cleared drafts."}
+            
         # 3. Save Questions
         stored_questions_data = []
         for q_data in request.questions:
@@ -331,9 +343,11 @@ def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db))
         # 5. Log Activity
         logging_service.log_activity(db, "Exam Vetted & Saved", details={"subject": subject.name, "count": len(request.questions)})
         
+        # 6. Cleanup any remaining drafts globally to prevent them from getting stuck in the Vetting Center
+        db.query(Question).filter(Question.status == "draft").delete()
         db.commit()
         
-        return {"success": True, "message": f"Saved {len(request.questions)} questions to history."}
+        return {"success": True, "message": f"Saved {len(request.questions)} questions to history and cleared drafts."}
         
     except Exception as e:
         db.rollback()
