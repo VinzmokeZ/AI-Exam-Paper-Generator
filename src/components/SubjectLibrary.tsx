@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { AIPromptBox } from './AIPromptBox';
 import { Link } from 'react-router-dom';
 import { Search, Plus, ChevronRight, FileStack, ArrowLeft, Sparkles, X, Palette, Check, Loader2, Trash2, Filter, Wand2 } from 'lucide-react';
 import { subjectService, Subject, api, connectionLogs, generationService } from '../services/api';
@@ -106,7 +107,7 @@ export function SubjectLibrary() {
       const newSubject = await subjectService.create({
         name: newSubjectName,
         code: newSubjectCode,
-        introduction: newIntroduction || `Introduction to ${newSubjectName}`,
+        introduction: newIntroduction || `Introduction to ${newSubjectName} `,
         color: selectedColor,
         gradient: selectedGradient
       });
@@ -138,7 +139,7 @@ export function SubjectLibrary() {
   };
 
   const handleDeleteSubject = async (id: number | string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${name}"?`)) return;
+    if (!window.confirm(`Are you sure you want to delete "${name}" ? `)) return;
 
     try {
       await subjectService.delete(id);
@@ -259,7 +260,7 @@ export function SubjectLibrary() {
                     setSelectedColor(option.color);
                     setSelectedGradient(option.gradient);
                   }}
-                  className={`w-9 h-9 rounded-xl bg-gradient-to-br ${option.gradient} border-2 transition-all flex items-center justify-center ${selectedColor === option.color ? 'border-[#0A1F1F] scale-110 shadow-lg' : 'border-transparent opacity-40 hover:opacity-100 hover:scale-105'}`}
+                  className={`w - 9 h - 9 rounded - xl bg - gradient - to - br ${option.gradient} border - 2 transition - all flex items - center justify - center ${selectedColor === option.color ? 'border-[#0A1F1F] scale-110 shadow-lg' : 'border-transparent opacity-40 hover:opacity-100 hover:scale-105'} `}
                 >
                   {selectedColor === option.color && <Check className="w-4 h-4 text-white" strokeWidth={4} />}
                 </button>
@@ -309,7 +310,7 @@ export function SubjectLibrary() {
               <h1 className="text-xl font-bold text-[#F5F1ED]">Subject Library</h1>
               <div className="flex items-center gap-2">
                 <p className="text-[10px] font-bold text-[#8B9E9E] uppercase tracking-widest">{subjects.length} subjects indexed</p>
-                <div className={`w-1.5 h-1.5 rounded-full ${isBackendOnline ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-white/20'}`} />
+                <div className={`w - 1.5 h - 1.5 rounded - full ${isBackendOnline ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-white/20'} `} />
                 <span className="text-[8px] font-bold text-white/40 uppercase tracking-tighter">
                   {isBackendOnline ? (activeModel || 'AI Parallel Active') : 'AI Parallel Dormant'}
                 </span>
@@ -370,7 +371,7 @@ export function SubjectLibrary() {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setShowSortMenu(!showSortMenu)}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showSortMenu ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'bg-white/5 text-[#8B9E9E] hover:text-[#F5F1ED]'}`}
+                  className={`w - 10 h - 10 rounded - xl flex items - center justify - center transition - all ${showSortMenu ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'bg-white/5 text-[#8B9E9E] hover:text-[#F5F1ED]'} `}
                 >
                   <Filter className="w-5 h-5" />
                 </motion.button>
@@ -404,7 +405,7 @@ export function SubjectLibrary() {
                               setSortOption(opt.id as any);
                               setShowSortMenu(false);
                             }}
-                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${sortOption === opt.id ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'text-[#F5F1ED] hover:bg-white/5'}`}
+                            className={`w - full flex items - center gap - 3 p - 3 rounded - xl transition - all text - left ${sortOption === opt.id ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'text-[#F5F1ED] hover:bg-white/5'} `}
                           >
                             <opt.icon className="w-4 h-4" />
                             <span className="text-xs font-bold">{opt.label}</span>
@@ -459,14 +460,14 @@ export function SubjectLibrary() {
         ) : (
           filteredSubjects.map((subject, index) => (
             <motion.div key={subject.id} layout>
-              <Link to={`/subjects/${subject.id}`}>
+              <Link to={`/ subjects / ${subject.id} `}>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                   whileHover={{ y: -5 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`bg-gradient-to-br ${subject.gradient} rounded-[32px] p-6 border-4 border-white/20 relative overflow-hidden shadow-xl`}
+                  className={`bg - gradient - to - br ${subject.gradient} rounded - [32px] p - 6 border - 4 border - white / 20 relative overflow - hidden shadow - xl`}
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-[128px] pointer-events-none" />
 
@@ -526,7 +527,7 @@ export function SubjectLibrary() {
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/subjects/${subject.id}`); }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/ subjects / ${subject.id} `); }}
                               className="w-8 h-8 bg-[#0A1F1F]/20 rounded-lg flex items-center justify-center text-[#0A1F1F] border border-white/20"
                             >
                               <Palette className="w-4 h-4" />
@@ -550,219 +551,35 @@ export function SubjectLibrary() {
           ))
         )}
       </div>
-      {/* Smart AI Generation Modal */}
-      <Modal
-        isOpen={showGenerateModal}
-        onClose={() => !isGenerating && setShowGenerateModal(false)}
-        title="Smart AI Generate"
-        subtitle={`Analyzing ${selectedSubjectForGen?.name}`}
-      >
-        <div className="space-y-6 max-h-[70vh] overflow-y-auto px-1">
-          {/* File Upload */}
-          <div className="bg-white p-6 rounded-[32px] border-2 border-[#E5DED6] relative overflow-hidden group">
-            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-4 block tracking-widest leading-none">Upload Source Material (PDF/Docx)</label>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={(e) => setGenFile(e.target.files?.[0] || null)}
-              accept=".pdf,.docx,.txt"
-              className="hidden"
-              disabled={isGenerating}
+      {/* Smart AI Generation Modal - Now Unified using AIPromptBox */}
+      <AnimatePresence>
+        {showGenerateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowGenerateModal(false)}
+              className="absolute inset-0 bg-[#0A1F1F]/40 backdrop-blur-sm"
             />
-            <div
-              onClick={() => !isGenerating && fileInputRef.current?.click()}
-              className="flex flex-col items-center justify-center gap-3 p-6 bg-[#F5F1ED] rounded-[24px] border-2 border-dashed border-[#E5DED6] group-hover:border-[#C5B3E6] hover:bg-[#E5DED6]/20 transition-all min-h-[140px] text-center cursor-pointer relative"
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-2xl bg-[#F5F1ED] rounded-[40px] shadow-2xl overflow-hidden"
             >
-              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm mb-1 pointer-events-none">
-                {genFile ? <Check className="w-6 h-6 text-green-500 animate-bounce" /> : <Plus className="w-6 h-6 text-[#C5B3E6]" strokeWidth={3} />}
-              </div>
-              <div className="w-full px-2 overflow-hidden pointer-events-none">
-                <p className="text-sm font-black text-[#0A1F1F] truncate break-words">
-                  {genFile ? genFile.name : "Tap to select file"}
-                </p>
-                <p className="text-[10px] text-[#8B9E9E] font-bold uppercase tracking-tighter mt-0.5">
-                  {genFile ? `${(genFile.size / 1024 / 1024).toFixed(2)} MB • Ready` : "PDF, DOCX, or Text up to 50MB"}
-                </p>
-              </div>
-              {genFile && (
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setGenFile(null); }}
-                  className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/80 backdrop-blur-sm flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors shadow-md z-20 border border-[#E5DED6]/50"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Indexed Files Management */}
-          {selectedSubjectForGen && indexedFilesMap[selectedSubjectForGen.id.toString()]?.length > 0 && (
-            <div className="bg-white/50 p-4 rounded-[24px] border-2 border-[#E5DED6]/50">
-              <label className="text-[9px] font-bold text-[#8B9E9E] uppercase mb-2 block tracking-widest leading-none">Previously Indexed</label>
-              <div className="flex flex-wrap gap-2">
-                {indexedFilesMap[selectedSubjectForGen.id.toString()].map((fileName, i) => (
-                  <div key={i} className="flex items-center gap-1.5 text-[9px] font-bold text-[#0A1F1F]/60 bg-white/60 px-2.5 py-1.5 rounded-lg border border-[#E5DED6]/40">
-                    <Check className="w-2.5 h-2.5 text-cyan-500" />
-                    <span className="truncate max-w-[100px]">{fileName}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Text Prompt Input area matching AIPromptBox */}
-          <div className="relative z-10">
-            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-2 block tracking-widest leading-none">Custom Instructions (Optional)</label>
-            <div className="relative">
-              {/* Glow effect */}
-              {genPrompt && (
-                <motion.div
-                  animate={{
-                    opacity: [0.3, 0.6, 0.3],
-                    scale: [0.98, 1.02, 0.98],
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-0 bg-gradient-to-r from-[#C5B3E6] via-[#8BE9FD] to-[#FFB86C] rounded-3xl blur-xl"
+              <div className="p-1">
+                <AIPromptBox
+                  onClose={() => setShowGenerateModal(false)}
+                  subjectId={selectedSubjectForGen?.id.toString()}
+                  subjectName={selectedSubjectForGen?.name}
+                  engine="gemini" // Default to cloud for smart generation
                 />
-              )}
-
-              <textarea
-                value={genPrompt}
-                onChange={(e) => setGenPrompt(e.target.value)}
-                placeholder="Example: Focus heavily on chapter 3, make the distractors very tricky..."
-                maxLength={500}
-                rows={3}
-                className="w-full bg-white rounded-3xl px-5 py-4 text-[#0A1F1F] placeholder:text-[#0A1F1F]/40 text-sm border-4 border-[#E5DED6] outline-none resize-none relative z-10 focus:border-[#C5B3E6] transition-colors"
-              />
-
-              {/* Character count */}
-              <div className="absolute bottom-3 right-4 z-20">
-                <motion.span
-                  animate={{
-                    color: genPrompt.length > 500 * 0.9 ? '#FF6AC1' : '#0A1F1F',
-                  }}
-                  className="text-[10px] font-bold opacity-40"
-                >
-                  {genPrompt.length}/500
-                </motion.span>
               </div>
-
-              {/* Magic wand button */}
-              <motion.button
-                whileHover={{ scale: 1.1, rotate: 15 }}
-                whileTap={{ scale: 0.9 }}
-                className="absolute top-3 right-3 w-8 h-8 bg-gradient-to-br from-[#FFB86C] to-[#FF6AC1] rounded-xl flex items-center justify-center z-20 shadow-lg"
-              >
-                <Wand2 className="w-4 h-4 text-[#0A1F1F]" />
-              </motion.button>
-            </div>
-
-            {/* Suggestions */}
-            <AnimatePresence>
-              {!genPrompt && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-3 overflow-hidden relative z-10"
-                >
-                  <p className="text-[9px] font-bold text-[#0A1F1F] opacity-60 uppercase mb-2">Try these ideas:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { text: 'Add 5 hard scenario questions', color: '#C5B3E6' },
-                      { text: 'Make options tricky & subtle', color: '#8BE9FD' },
-                      { text: 'Include real-world examples', color: '#FFB86C' }
-                    ].map((suggestion, index) => (
-                      <motion.button
-                        key={index}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: index * 0.1 }}
-                        whileHover={{ scale: 1.05, y: -2 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => setGenPrompt(suggestion.text)}
-                        className="px-2.5 py-1.5 rounded-lg text-[10px] font-semibold border text-[#0A1F1F] truncate"
-                        style={{
-                          backgroundColor: `${suggestion.color}30`,
-                          borderColor: `${suggestion.color}60`,
-                        }}
-                      >
-                        {suggestion.text}
-                      </motion.button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            </motion.div>
           </div>
-
-          {/* Count and Complexity */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Question Count */}
-            <div className="bg-white p-5 rounded-[32px] border-2 border-[#E5DED6]">
-              <label className="text-[9px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none text-center">Questions</label>
-              <div className="flex items-center justify-between pointer-events-auto px-2">
-                <button
-                  onClick={() => setGenCount(Math.max(1, genCount - 1))}
-                  className="w-10 h-10 rounded-xl bg-[#F5F1ED] text-[#0A1F1F] font-black hover:bg-[#E5DED6] transition-colors"
-                >
-                  -
-                </button>
-                <span className="text-2xl font-black text-[#0A1F1F]">{genCount}</span>
-                <button
-                  onClick={() => setGenCount(Math.min(20, genCount + 1))}
-                  className="w-10 h-10 rounded-xl bg-[#F5F1ED] text-[#0A1F1F] font-black hover:bg-[#E5DED6] transition-colors"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-            {/* Complexity */}
-            <div className="bg-white p-5 rounded-[32px] border-2 border-[#E5DED6]">
-              <label className="text-[9px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none text-center">Complexity</label>
-              <select
-                value={genComplexity}
-                onChange={(e) => setGenComplexity(e.target.value)}
-                className="w-full bg-[#F5F1ED] rounded-xl px-4 py-3 text-sm font-bold text-[#0A1F1F] outline-none border-none appearance-none text-center cursor-pointer hover:bg-[#E5DED6] transition-colors"
-              >
-                <option>Balanced</option>
-                <option>Recall</option>
-                <option>Analyze</option>
-                <option>Evaluate</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <button
-            onClick={handleSmartGenerateSubmit}
-            disabled={isGenerating || !genFile}
-            className="w-full bg-[#0A1F1F] text-white rounded-[32px] py-6 font-bold uppercase tracking-[0.2em] text-xs shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-4 overflow-hidden relative"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin text-[#C5B3E6]" />
-                <span>AI Processing...</span>
-                <motion.div
-                  className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#C5B3E6] to-[#8BE9FD]"
-                  initial={{ width: "0%" }}
-                  animate={{ width: "95%" }}
-                  transition={{ duration: 25, ease: "linear" }}
-                />
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5 text-[#C5B3E6]" strokeWidth={3} />
-                <span>Begin Brainstorming</span>
-              </>
-            )}
-          </button>
-
-          <p className="text-[9px] text-center text-[#8B9E9E] font-bold uppercase tracking-tight opacity-60 pb-2">
-            Powered by Cloud AI • Context Window: 128k Tokens
-          </p>
-        </div>
-      </Modal>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

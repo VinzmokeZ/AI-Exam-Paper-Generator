@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { AIPromptBox } from './AIPromptBox';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Upload, FileText, BookOpen, ChevronDown, Plus, Sparkles, Trash2, AlertCircle, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Upload, FileText, BookOpen, ChevronDown, Plus, Sparkles, Trash2, AlertCircle, Loader2, X, Check, Edit } from 'lucide-react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { subjectService, topicService, trainingService } from '../services/api';
@@ -158,6 +159,8 @@ export function SubjectDetail() {
   const [isIndexing, setIsIndexing] = useState(false);
   const [indexProgress, setIndexProgress] = useState(0);
   const [textbooks, setTextbooks] = useState<any[]>([]);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [selectedTopicForGen, setSelectedTopicForGen] = useState<any>(null);
 
   useEffect(() => {
     if (id) {
@@ -432,6 +435,15 @@ export function SubjectDetail() {
             <div className="flex items-center justify-between mb-4 relative z-10">
               <Link to="/subjects"><motion.button className="px-4 py-2 bg-[#0A1F1F]/80 rounded-xl text-white text-sm"><ArrowLeft className="w-4 h-4" /></motion.button></Link>
               <motion.button onClick={() => setShowEditSubjectModal(true)} className="px-4 py-2 bg-[#0A1F1F]/80 rounded-xl text-white text-sm font-bold">Edit</motion.button>
+              <motion.button
+                onClick={() => {
+                  setSelectedTopicForGen(null);
+                  setShowGenerateModal(true);
+                }}
+                className="px-4 py-2 bg-[#50FA7B] rounded-xl text-[#0A1F1F] text-sm font-bold flex items-center gap-2 shadow-lg"
+              >
+                <Sparkles className="w-4 h-4" /> AI Gen
+              </motion.button>
             </div>
             <div className="text-center relative z-10">
               <h1 className="text-2xl font-extrabold text-[#0A1F1F] leading-tight break-words">{subjectName}</h1>
@@ -527,7 +539,16 @@ export function SubjectDetail() {
                           <button className="flex items-center justify-center gap-2 bg-white/10 rounded-2xl py-4 text-white font-bold text-xs uppercase tracking-wider hover:bg-white/20 transition-all"><Upload className="w-4 h-4" /> Import</button>
                           <button className="flex items-center justify-center gap-2 bg-white/10 rounded-2xl py-4 text-white font-bold text-xs uppercase tracking-wider hover:bg-white/20 transition-all"><FileText className="w-4 h-4" /> Syllabus</button>
                         </div>
-                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate('/generate', { state: { subjectId: id, topicId: t.id, topicName: t.name, subjectName } })} className={`w-full py-5 rounded-[24px] font-black text-white text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-lg`} style={{ background: `linear-gradient(135deg, ${subjectColor}, ${subjectColor}CC)` }}>
+                        <motion.button
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          onClick={() => {
+                            setSelectedTopicForGen({ id: t.id, name: t.name });
+                            setShowGenerateModal(true);
+                          }}
+                          className={`w-full py-5 rounded-[24px] font-black text-white text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-lg`}
+                          style={{ background: `linear-gradient(135deg, ${subjectColor}, ${subjectColor}CC)` }}
+                        >
                           <Sparkles className="w-5 h-5" />
                           <span>Generate Exam</span>
                         </motion.button>
@@ -603,6 +624,37 @@ export function SubjectDetail() {
           </div>
         </div>
       </Modal>
+      {/* Unified AI Generation Modal */}
+      <AnimatePresence>
+        {showGenerateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowGenerateModal(false)}
+              className="absolute inset-0 bg-[#0A1F1F]/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-2xl bg-[#F5F1ED] rounded-[40px] shadow-2xl overflow-hidden"
+            >
+              <div className="p-1">
+                <AIPromptBox
+                  onClose={() => setShowGenerateModal(false)}
+                  subjectId={id}
+                  subjectName={subjectName}
+                  engine="gemini"
+                // Passing the topic name as a pre-filled prompt if a topic is selected
+                // To pre-fill AIPromptBox, I might need to add a 'initialPrompt' prop to it
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

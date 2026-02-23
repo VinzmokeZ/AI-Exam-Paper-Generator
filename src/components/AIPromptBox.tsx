@@ -15,9 +15,11 @@ interface AIPromptBoxProps {
   onGenerate?: (prompt: string, engine?: string, file?: File | null) => void;
   onClose?: () => void;
   engine?: string;
+  subjectId?: string;
+  subjectName?: string;
 }
 
-export function AIPromptBox({ onGenerate, onClose, engine = 'local' }: AIPromptBoxProps) {
+export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, subjectName }: AIPromptBoxProps) {
   const navigate = useNavigate();
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -60,18 +62,18 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local' }: AIPromptB
             parseInt(prompt.match(/\d+/)?.[0] || '5'),
             complexity,
             engine,
-            undefined, // subjectId
+            subjectId,
             undefined, // topicId
             prompt.trim() !== '' ? prompt : undefined // Pass the prompt!
           );
         } else {
           // Normal prompt generation
           generatedQuestions = await generationService.generateQuestions(
-            "General",
+            subjectName || "General",
             prompt,
             complexity,
-            5,
-            undefined,
+            parseInt(prompt.match(/\d+/)?.[0] || '5'),
+            subjectId,
             undefined,
             engine
           );
@@ -256,7 +258,9 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local' }: AIPromptB
                     <Sparkles className="w-6 h-6 text-[#50FA7B]" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black text-[#0A1F1F] leading-tight">Ask AI</h3>
+                    <h3 className="text-2xl font-black text-[#0A1F1F] leading-tight">
+                      {subjectName ? `Gen for ${subjectName}` : 'Ask AI'}
+                    </h3>
 
                     {/* Engine Indicator Badge */}
                     <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${engine === 'gemini' || engine === 'cloud' || engine === 'openai'

@@ -814,10 +814,12 @@ export function GenerateExam() {
         {showAIPrompt && (
           <AIPromptBox
             engine={activeModel || 'local'}
+            subjectId={selectedSubjectId?.toString()}
+            subjectName={subjects.find(s => s.id.toString() === selectedSubjectId?.toString())?.name}
             onGenerate={(prompt, engine, file) => {
               setShowAIPrompt(false);
               if (rubricPromptContext) {
-                handleGenerateFromRubric(rubricPromptContext, prompt, file);
+                handleGenerateFromRubric(rubricPromptContext, prompt, file, engine);
               } else {
                 handleAIGenerate(prompt, engine, file);
               }
