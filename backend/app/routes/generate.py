@@ -279,10 +279,17 @@ def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db))
         # 1. Resolve Subject
         subject = db.query(Subject).filter(Subject.name == request.subject_name).first()
         if not subject:
-            # Create a default subject if it doesn't exist
+            # Check if auto-generated code already exists
+            new_code = request.subject_name[:5].upper()
+            existing_code = db.query(Subject).filter(Subject.code == new_code).first()
+            if existing_code:
+                # Append a random string or let it be longer since it's an edge case 
+                import uuid
+                new_code = (request.subject_name[:3] + str(uuid.uuid4())[:2]).upper()
+                
             subject = Subject(
                 name=request.subject_name,
-                code=request.subject_name[:5].upper(),
+                code=new_code,
                 color="#50FA7B",
                 gradient="from-[#50FA7B] to-[#0A1F1F]"
             )
@@ -352,4 +359,5 @@ def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db))
     except Exception as e:
         db.rollback()
         import traceback
+        from fastapi.responses import JSONResponse
         return JSONResponse(status_code=500, content={"error": str(e), "trace": traceback.format_exc()})
