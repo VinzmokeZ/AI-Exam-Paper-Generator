@@ -269,7 +269,7 @@ class GenerationService:
         
         if subject_name.lower() == "general" or is_full_prompt or is_cloud_engine:
             reason = "Subject: General" if subject_name.lower() == "general" else ("Prompt Length" if is_full_prompt else "Cloud Engine")
-            print(f"[GEN] Skipping RAG (Reason: {reason}). Using input directly for speed.")
+            print(f"[GEN] Strategy: Direct Cloud Generation (RAG Bypassed for Accuracy). Reason: {reason}.")
             context_text = f"User Prompt: {topic_name}" 
         else:
             # Get RAG Service (Lazy)

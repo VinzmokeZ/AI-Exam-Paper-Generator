@@ -101,7 +101,7 @@ def startup_event():
         try:
             _time.sleep(1)  # Extra buffer before RAG
             from .services.rag_service import get_rag_service
-            print("[SERVER] Starting RAG Initialization in background...")
+            print("[SERVER] Initializing RAG (Background Standby Mode)...")
             service = get_rag_service()
             service.auto_index_kb()
         except Exception as e:
