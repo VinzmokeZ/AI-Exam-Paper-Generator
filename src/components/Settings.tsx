@@ -144,9 +144,9 @@ export function Settings() {
         {activeSetting === 'AI Engine' && (
           <div className="grid grid-cols-1 gap-2">
             {[
-              { id: 'ollama', name: 'Ollama (Local)', status: 'Connected' },
-              { id: 'gemini', name: 'Google Gemini', status: 'Ready' },
-              { id: 'openai', name: 'OpenAI GPT', status: 'Cloud' }
+              { id: 'ollama', name: 'Ollama (Local)', type: 'Local Model' },
+              { id: 'gemini', name: 'Google Gemini', type: 'Cloud Model' },
+              { id: 'openai', name: 'OpenAI GPT', type: 'Cloud Model' }
             ].map((engine) => (
               <button
                 key={engine.id}
@@ -157,7 +157,9 @@ export function Settings() {
                   <span className="text-sm font-black italic">{engine.name}</span>
                   {aiEngine === engine.id && <Sparkles className="w-3 h-3 text-[#C5B3E6]" />}
                 </div>
-                <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">{engine.status}</span>
+                <span className="text-[9px] font-bold uppercase tracking-widest opacity-60">
+                  {aiEngine === engine.id ? 'Active - Selected' : engine.type}
+                </span>
               </button>
             ))}
           </div>

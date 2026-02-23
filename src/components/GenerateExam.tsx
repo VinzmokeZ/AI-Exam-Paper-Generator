@@ -56,9 +56,24 @@ export function GenerateExam() {
       const response = await api.get('/health');
       setIsBackendOnline(true);
 
-      // Auto-select engine (Cloud > Local)
+      // Respect User Preference from Settings
+      const savedEngine = localStorage.getItem('ai_engine_mode');
+
+      if (savedEngine && (savedEngine === 'cloud' || savedEngine === 'openai' || savedEngine === 'gemini')) {
+        if (response.data.cloud === 'online') {
+          setActiveModel('cloud');
+          return;
+        }
+      } else if (savedEngine === 'ollama') {
+        if (response.data.ollama === 'online') {
+          setActiveModel(response.data.models?.[0] || 'local');
+          return;
+        }
+      }
+
+      // Auto-select engine fallback (Cloud > Local) if preference is missing or unavailable
       if (response.data.cloud === 'online') {
-        setActiveModel('cloud'); // Use 'cloud' as generic identifer for cloud provider
+        setActiveModel('cloud');
       } else if (response.data.ollama === 'online' && response.data.models?.length > 0) {
         setActiveModel(response.data.models[0]);
       }
