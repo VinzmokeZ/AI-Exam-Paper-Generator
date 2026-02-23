@@ -436,6 +436,12 @@ export function VettingCenter() {
                   </div>
                   <span className="text-sm font-semibold text-[#0A1F1F]">{co.label}</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black text-[#8B9E9E] uppercase tracking-tighter">Weightage</span>
+                  <div className="px-2 py-0.5 rounded-full bg-[#0A1F1F] text-[10px] font-black text-[#50FA7B]">
+                    LVL {level}
+                  </div>
+                </div>
               </div>
             );
           })}

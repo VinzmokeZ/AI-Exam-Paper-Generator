@@ -3,7 +3,8 @@ from openai import OpenAI
 import json
 from .rag_service import get_rag_service
 class GenerationService:
-    def __init__(self):
+    def __init__(self, ignore_cache=False):
+        self.ignore_cache = ignore_cache or os.getenv("IGNORE_CACHE") == "true"
         # Default local config
         self.local_client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
         self.local_model = "phi3:mini"
@@ -48,7 +49,7 @@ class GenerationService:
         cache_key = self._get_cache_key(subject_name, topic_name, blooms_level, rubric)
         cache_file = os.path.join(self.cache_dir, f"{cache_key}.json")
         
-        if os.path.exists(cache_file):
+        if os.path.exists(cache_file) and not self.ignore_cache:
             print(f"[CACHE] Hit for {topic_name}. Returning instantly.")
             with open(cache_file, "r") as f:
                 return json.load(f)
@@ -242,7 +243,7 @@ class GenerationService:
         cache_key = self._get_cache_key(subject_name, topic_name, blooms_level, rubric)
         cache_file = os.path.join(self.cache_dir, f"{cache_key}.json")
         
-        if os.path.exists(cache_file):
+        if os.path.exists(cache_file) and not self.ignore_cache:
             print(f"[CACHE] Hit for {topic_name}. Returning instantly.")
             with open(cache_file, "r") as f:
                 return json.load(f)
