@@ -260,7 +260,7 @@ export function SubjectLibrary() {
                     setSelectedColor(option.color);
                     setSelectedGradient(option.gradient);
                   }}
-                  className={`w - 9 h - 9 rounded - xl bg - gradient - to - br ${option.gradient} border - 2 transition - all flex items - center justify - center ${selectedColor === option.color ? 'border-[#0A1F1F] scale-110 shadow-lg' : 'border-transparent opacity-40 hover:opacity-100 hover:scale-105'} `}
+                  className={`w-9 h-9 rounded-xl bg-gradient-to-br ${option.gradient} border-2 transition-all flex items-center justify-center ${selectedColor === option.color ? 'border-[#0A1F1F] scale-110 shadow-lg' : 'border-transparent opacity-40 hover:opacity-100 hover:scale-105'}`}
                 >
                   {selectedColor === option.color && <Check className="w-4 h-4 text-white" strokeWidth={4} />}
                 </button>
@@ -310,7 +310,7 @@ export function SubjectLibrary() {
               <h1 className="text-xl font-bold text-[#F5F1ED]">Subject Library</h1>
               <div className="flex items-center gap-2">
                 <p className="text-[10px] font-bold text-[#8B9E9E] uppercase tracking-widest">{subjects.length} subjects indexed</p>
-                <div className={`w - 1.5 h - 1.5 rounded - full ${isBackendOnline ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-white/20'} `} />
+                <div className={`w-1.5 h-1.5 rounded-full ${isBackendOnline ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-white/20'}`} />
                 <span className="text-[8px] font-bold text-white/40 uppercase tracking-tighter">
                   {isBackendOnline ? (activeModel || 'AI Parallel Active') : 'AI Parallel Dormant'}
                 </span>
@@ -371,7 +371,7 @@ export function SubjectLibrary() {
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setShowSortMenu(!showSortMenu)}
-                  className={`w - 10 h - 10 rounded - xl flex items - center justify - center transition - all ${showSortMenu ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'bg-white/5 text-[#8B9E9E] hover:text-[#F5F1ED]'} `}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${showSortMenu ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'bg-white/5 text-[#8B9E9E] hover:text-[#F5F1ED]'}`}
                 >
                   <Filter className="w-5 h-5" />
                 </motion.button>
@@ -405,7 +405,7 @@ export function SubjectLibrary() {
                               setSortOption(opt.id as any);
                               setShowSortMenu(false);
                             }}
-                            className={`w - full flex items - center gap - 3 p - 3 rounded - xl transition - all text - left ${sortOption === opt.id ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'text-[#F5F1ED] hover:bg-white/5'} `}
+                            className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left ${sortOption === opt.id ? 'bg-[#C5B3E6] text-[#0A1F1F]' : 'text-[#F5F1ED] hover:bg-white/5'}`}
                           >
                             <opt.icon className="w-4 h-4" />
                             <span className="text-xs font-bold">{opt.label}</span>
@@ -460,14 +460,14 @@ export function SubjectLibrary() {
         ) : (
           filteredSubjects.map((subject, index) => (
             <motion.div key={subject.id} layout>
-              <Link to={`/ subjects / ${subject.id} `}>
+              <Link to={`/subjects/${subject.id}`}>
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                   whileHover={{ y: -5 }}
                   whileTap={{ scale: 0.98 }}
-                  className={`bg - gradient - to - br ${subject.gradient} rounded - [32px] p - 6 border - 4 border - white / 20 relative overflow - hidden shadow - xl`}
+                  className={`bg-gradient-to-br ${subject.gradient} rounded-[32px] p-6 border-4 border-white/20 relative overflow-hidden shadow-xl`}
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-[128px] pointer-events-none" />
 
@@ -527,7 +527,7 @@ export function SubjectLibrary() {
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/ subjects / ${subject.id} `); }}
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/subjects/${subject.id}`); }}
                               className="w-8 h-8 bg-[#0A1F1F]/20 rounded-lg flex items-center justify-center text-[#0A1F1F] border border-white/20"
                             >
                               <Palette className="w-4 h-4" />
