@@ -183,20 +183,49 @@ class GenerationService:
                             raise ValueError("[GEN] ERROR: Ollama unreachable and no cloud API keys found. Cannot generate questions.")
 
                 print(f"[GEN] Attempt {attempt + 1}/{max_retries} for {topic_name[:30]} using {provider_name} ({model})...")
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": "You are a professional educational assessment engine. You always return valid JSON representing an array of questions or an object containing a 'questions' array. No conversational text."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.2, 
-                    max_tokens=4000, 
-                    timeout=900.0,
-                    # JSON mode is only natively supported by OpenAI. 
-                    # OpenRouter + Gemini/Claude sometimes fail if this is set.
-                    response_format={"type": "json_object"} if provider_name == "openai" and "gpt" in model else None
-                )
-                content = response.choices[0].message.content
+                if provider_name == "gemini":
+                    # Native Gemini REST API Call (more reliable than the OpenAI shim)
+                    api_key = self.cloud_client.api_key
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+                    
+                    native_payload = {
+                        "contents": [
+                            {"role": "user", "parts": [{"text": "You are a professional educational assessment engine. You always return valid JSON representing an array of questions. No conversational text."}]},
+                            {"role": "user", "parts": [{"text": prompt}]}
+                        ],
+                        "generationConfig": {
+                            "temperature": 0.2,
+                            "maxOutputTokens": 4000,
+                            "responseMimeType": "application/json"
+                        }
+                    }
+                    
+                    import requests
+                    res = requests.post(url, json=native_payload, timeout=90.0)
+                    
+                    if res.status_code != 200:
+                        error_msg = f"Native Gemini Error {res.status_code}: {res.text}"
+                        print(f"[GEN] {error_msg}")
+                        if res.status_code == 429:
+                            time.sleep(5) # Backoff for rate limit
+                        raise ValueError(error_msg)
+                    
+                    native_data = res.json()
+                    content = native_data['candidates'][0]['content']['parts'][0]['text']
+                else:
+                    # Standard OpenAI / OpenRouter Call
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {"role": "system", "content": "You are a professional educational assessment engine. You always return valid JSON representing an array of questions or an object containing a 'questions' array. No conversational text."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        temperature=0.2, 
+                        max_tokens=4000, 
+                        timeout=90.0,
+                        response_format={"type": "json_object"} if provider_name == "openai" and "gpt" in model else None
+                    )
+                    content = response.choices[0].message.content
                 if not content:
                     raise ValueError("Empty response from AI model")
 
@@ -255,7 +284,7 @@ class GenerationService:
         # No fallback list allowed anymore. If we fail, we raise the error so the user knows.
         raise Exception(f"Failed to generate valid questions after {max_retries} attempts. The AI model may be overloaded or the context is too complex.")
 
-    def generate_questions(self, subject_name, topic_name, blooms_level, count=5, subject_id=None, rubric=None, engine="local", custom_prompt=None, fresh=False):
+    def generate_questions(self, subject_name, topic_name, blooms_level, count=5, subject_id=None, rubric=None, engine="local", custom_prompt=None, fresh=False, kb_id=None):
         # Check Cache First for Speed
         salt = str(time.time()) if fresh else None
         cache_key = self._get_cache_key(subject_name, topic_name, blooms_level, rubric, salt=salt)
@@ -273,7 +302,24 @@ class GenerationService:
         is_full_prompt = len(topic_name) > 40
         is_cloud_engine = engine in ["cloud", "openai", "gemini"]
         
-        if subject_name.lower() == "general" or is_full_prompt or is_cloud_engine:
+        # RAG / KnowledgeBase context integration
+        if kb_id:
+            try:
+                from ..database import SessionLocal
+                from .rag_service import get_rag_service
+                db = SessionLocal()
+                rag_service = get_rag_service()
+                context_list = rag_service.get_context_from_kb(kb_id, topic_name, db)
+                if context_list:
+                    context_text = "\n\n".join(context_list)
+                else:
+                    context_text = f"Topic: {topic_name}"
+                db.close()
+                print(f"[GEN] Using KnowledgeBase ID: {kb_id} for context.")
+            except Exception as e:
+                print(f"[RAG] Error fetching KB context: {e}")
+                context_text = f"Topic: {topic_name}"
+        elif subject_name.lower() == "general" or is_full_prompt or is_cloud_engine:
             reason = "Subject: General" if subject_name.lower() == "general" else ("Prompt Length" if is_full_prompt else "Cloud Engine")
             print(f"[GEN] Strategy: Direct Cloud Generation (RAG Bypassed for Accuracy). Reason: {reason}.")
             context_text = f"User Prompt: {topic_name}" 
@@ -289,8 +335,7 @@ class GenerationService:
             except Exception as e:
                 print(f"[RAG] Warning: RAG failed {e}. Proceeding with prompt only.")
                 context_text = f"Topic: {topic_name}"
-        
-        
+
         # Generate using shared core logic
         result = self._generate_questions_core(context_text, subject_name, topic_name, blooms_level, count, rubric, engine, custom_prompt=custom_prompt)
         

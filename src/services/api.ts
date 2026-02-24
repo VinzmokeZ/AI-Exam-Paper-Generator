@@ -345,7 +345,7 @@ export const gamificationService = {
 };
 
 export const generationService = {
-    generateQuestions: async (subject: string, topic: string, level: string, count: number = 5, subjectId?: string, rubric?: any, engine: string = "local", fresh: boolean = false) => {
+    generateQuestions: async (subject: string, topic: string, level: string, count: number = 5, subjectId?: string, rubric?: any, engine: string = "local", fresh: boolean = false, kb_id?: number) => {
         try {
             const payload = {
                 subject_name: subject,
@@ -355,7 +355,8 @@ export const generationService = {
                 subject_id: subjectId,
                 rubric: rubric,
                 engine: engine,
-                fresh: fresh
+                fresh: fresh,
+                kb_id: kb_id
             };
 
             const response = await api.post('/generate/questions', payload, { timeout: AI_TIMEOUT });
@@ -428,7 +429,7 @@ export const generationService = {
             return mockQuestions;
         }
     },
-    uploadGenerationFile: async (file: File, count: number = 5, complexity: string = "Balanced", engine: string = "local", subjectId?: string, topicId?: string, customPrompt?: string, fresh: boolean = false) => {
+    uploadGenerationFile: async (file: File, count: number = 5, complexity: string = "Balanced", engine: string = "local", subjectId?: string, topicId?: string, customPrompt?: string, fresh: boolean = false, kb_id?: number) => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('count', count.toString());
@@ -438,6 +439,7 @@ export const generationService = {
         if (topicId) formData.append('topic_id', topicId);
         if (customPrompt) formData.append('custom_prompt', customPrompt);
         if (fresh) formData.append('fresh', 'true');
+        if (kb_id) formData.append('kb_id', kb_id.toString());
 
         const response = await api.post('/generate/from-file', formData, {
             headers: { 'Content-Type': 'multipart/form-data' }

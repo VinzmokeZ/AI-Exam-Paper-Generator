@@ -1,0 +1,11 @@
+The Solar System consists of eight planets: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, and Neptune. 
+Mercury is the closest planet to the Sun. 
+Jupiter is the largest planet. 
+The asteroid belt lies between the orbits of Mars and Jupiter. 
+Pluto was reclassified as a dwarf planet in 2006.
+Course Outcomes for this material:
+CO1: Understand the composition of the Solar System.
+CO2: Identify characteristics of individual planets.
+CO3: Describe the location of major bodies like the asteroid belt.
+CO4: Explain historical changes in planetary classification.
+CO5: Apply astronomical knowledge to solve space problems.

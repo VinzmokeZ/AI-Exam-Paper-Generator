@@ -10,7 +10,7 @@ load_dotenv()
 from .routes import (
     subjects, topics, generate, training, logging, gamification, 
     questions, history, leaderboard, dashboard, notifications, 
-    achievements, rubrics, course_outcomes
+    achievements, rubrics, course_outcomes, rag
 )
 
 app = FastAPI(title="AI Exam Oracle API")
@@ -39,6 +39,7 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["Not
 app.include_router(achievements.router, prefix="/api/achievements", tags=["Achievements"])
 app.include_router(rubrics.router, tags=["Rubrics"])
 app.include_router(course_outcomes.router, tags=["Course Outcomes"])
+app.include_router(rag.router, prefix="/api/rag", tags=["RAG"])
 
 # --- STARTUP PURGE LOGIC ---
 def purge_backend_cache():

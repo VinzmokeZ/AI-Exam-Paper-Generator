@@ -12,14 +12,15 @@ const promptSuggestions = [
 ];
 
 interface AIPromptBoxProps {
-  onGenerate?: (prompt: string, engine?: string, file?: File | null) => void;
+  onGenerate?: (prompt: string, engine?: string, file?: File | null, kbId?: number) => void;
   onClose?: () => void;
   engine?: string;
   subjectId?: string;
   subjectName?: string;
+  kbId?: number | null;
 }
 
-export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, subjectName }: AIPromptBoxProps) {
+export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, subjectName, kbId }: AIPromptBoxProps) {
   const navigate = useNavigate();
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -47,7 +48,7 @@ export function AIPromptBox({ onGenerate, onClose, engine = 'local', subjectId, 
       const currentEngine = (engine && engine !== 'local') ? engine : storedEngine;
 
       if (onGenerate) {
-        onGenerate(prompt, currentEngine, selectedFile);
+        onGenerate(prompt, currentEngine, selectedFile, kbId || undefined);
         return;
       }
 

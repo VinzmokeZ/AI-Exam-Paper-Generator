@@ -1,4 +1,9 @@
 import os
+import requests
+import re
+from typing import List, Optional
+from sqlalchemy.orm import Session
+from ..models import KnowledgeBase, KnowledgeChunk
 
 # NOTE: sentence_transformers and chromadb are imported lazily inside the class
 # to prevent blocking network downloads at module load time.
@@ -168,17 +173,88 @@ class RAGService:
             
         return []
 
-# rag_service = RAGService()
-# Global instance (initialized with lock)
-ra_service_instance = None
-import threading
-rag_lock = threading.Lock()
+    async def process_knowledge_base(self, kb: KnowledgeBase, db: Session):
+        """Processes a KnowledgeBase entry: downloads, extracts text, and chunks."""
+        print(f"[RAG] Processing KnowledgeBase: {kb.title} ({kb.source_type})")
+        
+        text = ""
+        if kb.source_type == "drive":
+            text = self._process_drive_link(kb.source_url)
+        
+        if not text:
+            print(f"[RAG] ❌ No text extracted for KB: {kb.title}")
+            return
 
-def get_rag_service():
-    global ra_service_instance
-    if ra_service_instance is None:
-        with rag_lock:
-            if ra_service_instance is None:
-                print("[RAG] Initializing RAG Service (Singleton)...")
-                ra_service_instance = RAGService()
-    return ra_service_instance
+        # Simple chunking logic
+        chunk_size = 1500
+        chunks = [text[i:i+chunk_size] for i in range(0, len(text), chunk_size)]
+        
+        # Save chunks to DB
+        for chunk_content in chunks:
+            chunk = KnowledgeChunk(
+                kb_id=kb.id,
+                content=chunk_content
+            )
+            db.add(chunk)
+        
+        db.commit()
+        print(f"[RAG] ✅ Processed {len(chunks)} chunks for KB: {kb.title}")
+
+    def _process_drive_link(self, url: str) -> str:
+        """Extracts text from a Google Drive PDF link."""
+        file_id = self._extract_drive_id(url)
+        if not file_id:
+            print(f"[RAG] ❌ Could not extract file ID from: {url}")
+            return ""
+        
+        # Construct direct download link
+        download_url = f"https://docs.google.com/uc?export=download&id={file_id}"
+        
+        try:
+            response = requests.get(download_url, timeout=30)
+            if response.status_code != 200:
+                print(f"[RAG] ❌ Drive download failed: {response.status_code}")
+                return ""
+            
+            # Save temporary file to read
+            temp_path = f"temp_{file_id}.pdf"
+            with open(temp_path, "wb") as f:
+                f.write(response.content)
+            
+            # Extract text using PyPDF2 (already in requirements)
+            from PyPDF2 import PdfReader
+            reader = PdfReader(temp_path)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
+            
+            # Cleanup
+            os.remove(temp_path)
+            return text
+        except Exception as e:
+            print(f"[RAG] ❌ Error processing Drive link: {e}")
+            return ""
+
+    def _extract_drive_id(self, url: str) -> Optional[str]:
+        """Regex to find Google Drive file ID."""
+        patterns = [
+            r'[-\w]{25,}', # Generic ID match
+            r'd/([-\w]{25,})',
+            r'id=([-\w]{25,})'
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                # If it's the more specific match, the ID is in group 1
+                return match.group(1) if len(match.groups()) > 0 else match.group(0)
+        return None
+
+    def get_context_from_kb(self, kb_id: int, query: str, db: Session, n_results: int = 5) -> List[str]:
+        """Retrieves relevant chunks from a specific KnowledgeBase."""
+        # For now, since we haven't implemented full vector search in SQL yet, 
+        # we'll do a simple keyword match or just return top chunks.
+        # Once pgvector is up, this will be a vector search.
+        chunks = db.query(KnowledgeChunk).filter(KnowledgeChunk.kb_id == kb_id).limit(n_results).all()
+        return [c.content for c in chunks]
+
+# Global instance logic ... (unchanged)

@@ -74,6 +74,32 @@ class Document(Base):
     embedding_id = Column(String(255))
     created_at = Column(DateTime, default=datetime.utcnow)
 
+class KnowledgeBase(Base):
+    __tablename__ = "knowledge_bases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(255))
+    description = Column(String(1000), nullable=True)
+    source_url = Column(String(500), nullable=True) # Google Drive Link or File Path
+    source_type = Column(String(50)) # "drive", "upload", "local"
+    is_processed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    chunks = relationship("KnowledgeChunk", back_populates="kb", cascade="all, delete-orphan")
+
+class KnowledgeChunk(Base):
+    __tablename__ = "knowledge_chunks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    kb_id = Column(Integer, ForeignKey("knowledge_bases.id"))
+    content = Column(String(5000))
+    # We use JSON to store embeddings for broad compatibility (SQLite/MySQL/Postgres)
+    # unless we explicitly install and enable pgvector.
+    metadata_json = Column(JSON, nullable=True) 
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    kb = relationship("KnowledgeBase", back_populates="chunks")
+
 class Notification(Base):
     __tablename__ = "notifications"
 

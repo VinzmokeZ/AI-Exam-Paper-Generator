@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { rubricService, RubricResponse } from '../services/rubricService';
 import { DEFAULT_SUBJECTS } from '../constants/defaultData';
 import { AIPromptBox } from './AIPromptBox';
+import { ContextSelector } from './ContextSelector';
 
 // Define strict types for location state
 interface LocationState {
@@ -43,6 +44,7 @@ export function GenerateExam() {
   const [isBackendOnline, setIsBackendOnline] = useState(false);
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [selectedContextId, setSelectedContextId] = useState<number | null>(null);
 
   useEffect(() => {
     loadRubrics();
@@ -208,7 +210,7 @@ export function GenerateExam() {
     }
   };
 
-  const handleAIGenerate = async (prompt: string, engineOverride?: string, file?: File | null) => {
+  const handleAIGenerate = async (prompt: string, engineOverride?: string, file?: File | null, kb_id?: number) => {
     // Find subject - check both state and list
     let subject = subjects.find(s => s.id.toString() === selectedSubjectId?.toString());
 
@@ -296,7 +298,8 @@ export function GenerateExam() {
           subject.id.toString(),
           undefined,
           effectiveEngine,
-          true // Always fresh as requested
+          true, // Always fresh as requested
+          selectedContextId || undefined
         );
       }
 
@@ -694,6 +697,14 @@ export function GenerateExam() {
             </motion.div>
           </div>
 
+          {/* Knowledge Context Selector */}
+          <div className="mx-6 mb-6">
+            <ContextSelector
+              onSelect={setSelectedContextId}
+              selectedId={selectedContextId}
+            />
+          </div>
+
           {/* AI Prompt CTA */}
           <div className="mx-6 mb-6">
             <button
@@ -846,12 +857,13 @@ export function GenerateExam() {
             engine={activeModel || 'local'}
             subjectId={selectedSubjectId?.toString()}
             subjectName={subjects.find(s => s.id.toString() === selectedSubjectId?.toString())?.name}
-            onGenerate={(prompt, engine, file) => {
+            kbId={selectedContextId}
+            onGenerate={(prompt, engine, file, kbId) => {
               setShowAIPrompt(false);
               if (rubricPromptContext) {
                 handleGenerateFromRubric(rubricPromptContext, prompt, file, engine);
               } else {
-                handleAIGenerate(prompt, engine, file);
+                handleAIGenerate(prompt, engine, file, kbId);
               }
               setRubricPromptContext(null);
             }}

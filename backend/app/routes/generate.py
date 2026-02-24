@@ -57,6 +57,7 @@ class GenerateRequest(BaseModel):
     engine: str = "local"
     custom_prompt: str = None
     fresh: bool = False
+    kb_id: int = None
 
 class BulkSaveRequest(BaseModel):
     subject_name: str
