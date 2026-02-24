@@ -24,7 +24,7 @@ services:
         fromDatabase:
           name: ai-exam-db
           property: connectionString
-      - key: OPENAI_API_KEY
-        sync: false # User will be prompted to enter this securely
       - key: GOOGLE_API_KEY
-        sync: false # User will be prompted to enter this securely
+        sync: false # Set this in Render dashboard: AIzaSyD-X6b9qetMC5JDZJymBVXzkJW08_7n87M
+      - key: OPENAI_MODEL
+        value: "gemini-2.0-flash" # Direct Gemini model (free tier)

@@ -89,7 +89,7 @@ async def generate_from_rubric(
             
             # Extract text
             text = ""
-            MAX_CHARS = 50000 
+            MAX_CHARS = 12000  # ~2400 words — ample context for Gemini, token-efficient
             _, ext = os.path.splitext(file_path)
             
             if ext.lower() == '.pdf':
@@ -171,7 +171,7 @@ async def generate_from_file(
         
         # Extract text (Memory Safe & Token Capped)
         text = ""
-        MAX_CHARS = 50000 # ~10k words, roughly 12-15k tokens. Safe for Ram & Gemini.
+        MAX_CHARS = 12000  # ~2400 words — ample context for Gemini free tier, prevents 402 token errors
         
         _, ext = os.path.splitext(file_path)
         if ext.lower() == '.pdf':
