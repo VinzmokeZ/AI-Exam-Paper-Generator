@@ -257,4 +257,11 @@ class RAGService:
         chunks = db.query(KnowledgeChunk).filter(KnowledgeChunk.kb_id == kb_id).limit(n_results).all()
         return [c.content for c in chunks]
 
-# Global instance logic ... (unchanged)
+# Global instance logic
+_rag_service = None
+
+def get_rag_service():
+    global _rag_service
+    if _rag_service is None:
+        _rag_service = RAGService()
+    return _rag_service
