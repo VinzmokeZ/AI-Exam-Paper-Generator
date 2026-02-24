@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FileText, Plus, Link as LinkIcon, Loader2, Check, X, Database } from 'lucide-react';
 import { toast } from 'sonner';
+import { api as axiosApi } from '../services/api';
 
 interface KnowledgeBase {
     id: number;
@@ -28,9 +29,8 @@ export function ContextSelector({ onSelect, selectedId }: ContextSelectorProps) 
 
     const fetchDocuments = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/rag/documents');
-            const data = await res.json();
-            setDocuments(data);
+            const res = await axiosApi.get('/rag/documents');
+            setDocuments(res.data);
         } catch (error) {
             console.error("Failed to fetch documents", error);
         } finally {
@@ -42,16 +42,12 @@ export function ContextSelector({ onSelect, selectedId }: ContextSelectorProps) 
         if (!newDoc.title || !newDoc.url) return;
         setIsProcessing(true);
         try {
-            const res = await fetch('http://localhost:8000/api/rag/process-link', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: newDoc.title,
-                    source_url: newDoc.url,
-                    source_type: 'drive'
-                })
+            const res = await axiosApi.post('/rag/process-link', {
+                title: newDoc.title,
+                source_url: newDoc.url,
+                source_type: 'drive'
             });
-            if (res.ok) {
+            if (res.status === 200 || res.status === 201) {
                 toast.success("Document added and processing in background!");
                 setNewDoc({ title: '', url: '' });
                 setShowAdd(false);
