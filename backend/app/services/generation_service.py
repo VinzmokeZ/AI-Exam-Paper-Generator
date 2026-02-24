@@ -206,8 +206,28 @@ class GenerationService:
                     if res.status_code != 200:
                         error_msg = f"Native Gemini Error {res.status_code}: {res.text}"
                         print(f"[GEN] {error_msg}")
+                        
                         if res.status_code == 429:
-                            time.sleep(5) # Backoff for rate limit
+                            # Gemini Free Tier reset is usually every 60s. We wait 65s to be safe.
+                            wait_time = 65
+                            try:
+                                # Attempt to parse expected retry delay if provided by Google
+                                err_data = res.json()
+                                if 'details' in err_data['error']:
+                                    for detail in err_data['error']['details']:
+                                        if detail.get('@type') == 'type.googleapis.com/google.rpc.RetryInfo':
+                                            retry_after = detail.get('retryDelay', '60s')
+                                            wait_time = int(re.search(r'\d+', retry_after).group()) + 5
+                            except:
+                                pass
+                            
+                            print(f"[GEN] ⏳ Quota exceeded. Resting for {wait_time}s before retry {attempt + 2}/{max_retries + 2}...")
+                            time.sleep(wait_time)
+                            
+                            # For quota errors, we allow more retries than standard errors
+                            if attempt < 5: # Allow up to 5 retries for quota
+                                continue
+                                
                         raise ValueError(error_msg)
                     
                     native_data = res.json()

@@ -116,6 +116,7 @@ echo.
 :: STEP 6: START BACKEND WITH LIVE REQUEST LOG
 :: ============================================================
 echo [6/6] Starting AI Engine...
+pip install -r requirements.txt >nul 2>&1
 echo  ==========================================================
 echo    LIVE LOG  - All HTTP requests appear below
 echo    192.168.x.x:PORT - GET /api/health 200 OK
