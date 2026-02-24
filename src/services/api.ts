@@ -14,33 +14,26 @@ const getBaseUrl = () => {
     const customUrl = localStorage.getItem('custom_api_url');
     if (customUrl) return customUrl.endsWith('/api') ? customUrl : `${customUrl}/api`;
 
-    // 2. Identify Environment
+    // 2. Check for actively discovered or manual tunnel link (Highest priority for APK/Cloud)
+    const activeUrl = localStorage.getItem('active_discovered_url');
+    if (activeUrl) return activeUrl.endsWith('/api') ? activeUrl : `${activeUrl}/api`;
+
+    // 3. Identify Environment
     const isNative = isCapacitorApp ||
         (window.location.protocol === 'http:' && window.location.hostname === 'localhost' && !window.location.port);
     const mode = localStorage.getItem('ai_engine_mode') || 'local';
     const hostname = window.location.hostname;
 
-    // 3. SMART DISCOVERY (For APK / Mobile)
+    // 4. SMART DISCOVERY (For APK / Mobile / Cloud)
     if (isNative || hostname.includes('firebase') || hostname.includes('web.app') || mode === 'cloud') {
         const tunnelUrl = localStorage.getItem('ai_tunnel_url') || 'https://ai-exam-vinz.loca.lt';
-
-        // For Android Studio emulator: 10.0.2.2 ALWAYS maps to host PC localhost
-        // This is the correct default — never use tunnel as default for Capacitor
         const emulatorUrl = 'http://10.0.2.2:8000';
         const defaultUrl = isCapacitorApp ? emulatorUrl : tunnelUrl;
-        const activeUrl = localStorage.getItem('active_discovered_url') || defaultUrl;
 
-        if (isNative) {
-            console.log(`[Smart Discovery] APK connecting to: ${activeUrl}`);
-        }
-
-        return `${activeUrl}/api`;
+        return `${defaultUrl}/api`;
     }
 
-    if (mode === 'local' && (hostname === 'localhost' || hostname === '127.0.0.1')) {
-        return `http://${hostname}:8000/api`;
-    }
-
+    // 5. LOCAL FALLBACK
     return `http://${hostname}:8000/api`;
 };
 
