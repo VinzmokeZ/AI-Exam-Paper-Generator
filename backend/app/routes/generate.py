@@ -2,8 +2,50 @@ from fastapi import APIRouter, Depends
 from ..services.generation_service import generation_service
 from pydantic import BaseModel
 from typing import List
+import random
 
 router = APIRouter()
+
+def extract_pdf_smart_chunks(reader, chunk_size: int = 4000, num_chunks: int = 3) -> str:
+    """
+    Multi-Chunk PDF Sampling (Option B):
+    Divides the PDF into equal sections (beginning, middle, end),
+    picks random pages from each section, and combines the text.
+    This ensures every generation covers DIFFERENT topics from across
+    the whole document — unique and varied each time.
+    """
+    total_pages = len(reader.pages)
+
+    # Small document — just read it all, no need to sample
+    if total_pages <= num_chunks * 2:
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() or ""
+        return text[:chunk_size * num_chunks]
+
+    section_labels = ["Beginning", "Middle", "End"]
+    collected = []
+    section_size = total_pages // num_chunks
+
+    for i in range(num_chunks):
+        section_start = i * section_size
+        section_end = min((i + 1) * section_size - 1, total_pages - 1)
+
+        # Pick a random starting page within this section
+        start_page = random.randint(section_start, max(section_start, section_end - 2))
+
+        # Read a few pages from that starting point
+        chunk_text = ""
+        for page_idx in range(start_page, min(start_page + 4, total_pages)):
+            chunk_text += reader.pages[page_idx].extract_text() or ""
+            if len(chunk_text) >= chunk_size:
+                break
+
+        if chunk_text.strip():
+            label = section_labels[i] if i < len(section_labels) else f"Section {i+1}"
+            collected.append(f"[Document Section — {label} (pages ~{start_page+1}+)]\n{chunk_text[:chunk_size]}")
+
+    return "\n\n---\n\n".join(collected)
 
 class GenerateRequest(BaseModel):
     subject_name: str
@@ -87,34 +129,26 @@ async def generate_from_rubric(
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             
-            # Extract text
-            text = ""
-            MAX_CHARS = 12000  # ~2400 words — ample context for Gemini, token-efficient
+            # Extract text using Multi-Chunk Sampling for variety
             _, ext = os.path.splitext(file_path)
-            
+
             if ext.lower() == '.pdf':
                 from PyPDF2 import PdfReader
                 reader = PdfReader(file_path)
-                for page in reader.pages:
-                    text += page.extract_text() or ""
-                    if len(text) > MAX_CHARS:
-                        text = text[:MAX_CHARS]
-                        break
+                text = extract_pdf_smart_chunks(reader, chunk_size=4000, num_chunks=3)
+                print(f"[File] Smart-sampled PDF: {len(reader.pages)} pages → {len(text)} chars from 3 random sections")
             elif ext.lower() == '.docx':
                 from docx import Document
                 doc = Document(file_path)
-                for para in doc.paragraphs:
-                    text += para.text + "\n"
-                    if len(text) > MAX_CHARS:
-                        text = text[:MAX_CHARS]
-                        break
+                raw = "\n".join(p.text for p in doc.paragraphs)
+                text = raw[:12000]
             else:
                 with open(file_path, 'r', encoding='utf-8') as f:
-                    text = f.read(MAX_CHARS)
-                    
+                    text = f.read(12000)
+
             os.remove(file_path)
             if text.strip():
-                context_text = text[:MAX_CHARS]
+                context_text = text
         except Exception as e:
             print(f"File extraction error in rubric gen: {e}")
 
@@ -169,33 +203,22 @@ async def generate_from_file(
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
         
-        # Extract text (Memory Safe & Token Capped)
-        text = ""
-        MAX_CHARS = 12000  # ~2400 words — ample context for Gemini free tier, prevents 402 token errors
-        
+        # Extract text using Multi-Chunk Sampling for variety across full document
         _, ext = os.path.splitext(file_path)
+
         if ext.lower() == '.pdf':
             from PyPDF2 import PdfReader
             reader = PdfReader(file_path)
-            for page in reader.pages:
-                extracted = page.extract_text() or ""
-                text += extracted
-                if len(text) > MAX_CHARS:
-                    print(f"[File] Truncating PDF text at {MAX_CHARS} characters to prevent OOM/Token limits.")
-                    text = text[:MAX_CHARS]
-                    break
+            text = extract_pdf_smart_chunks(reader, chunk_size=4000, num_chunks=3)
+            print(f"[File] Smart-sampled PDF: {len(reader.pages)} pages → {len(text)} chars from 3 random sections")
         elif ext.lower() == '.docx':
             from docx import Document
             doc = Document(file_path)
-            for para in doc.paragraphs:
-                text += para.text + "\n"
-                if len(text) > MAX_CHARS:
-                    text = text[:MAX_CHARS]
-                    break
+            text = "\n".join(p.text for p in doc.paragraphs)[:12000]
         else:
             with open(file_path, 'r', encoding='utf-8') as f:
-                text = f.read(MAX_CHARS) # Read only up to max chars
-        
+                text = f.read(12000)
+
         # Cleanup temp file
         os.remove(file_path)
         
