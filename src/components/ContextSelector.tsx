@@ -95,14 +95,14 @@ export function ContextSelector({ onSelect, selectedId }: ContextSelectorProps) 
                                 onChange={(e) => setNewDoc({ ...newDoc, title: e.target.value })}
                                 className="w-full bg-white rounded-xl px-4 py-2 text-xs border border-[#E5DED6] focus:outline-none focus:border-[#C5B3E6]"
                             />
-                            <div className="relative">
-                                <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 text-[#8B9E9E]" />
+                            <div className="relative group">
+                                <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8B9E9E] group-focus-within:text-[#C5B3E6] transition-colors" />
                                 <input
                                     type="text"
-                                    placeholder="Google Drive Link"
+                                    placeholder="Paste Google Drive PDF Link here..."
                                     value={newDoc.url}
                                     onChange={(e) => setNewDoc({ ...newDoc, url: e.target.value })}
-                                    className="w-full bg-white rounded-xl pl-8 pr-4 py-2 text-xs border border-[#E5DED6] focus:outline-none focus:border-[#C5B3E6]"
+                                    className="w-full bg-white rounded-xl pl-12 pr-4 py-3 text-xs border border-[#E5DED6] focus:outline-none focus:border-[#C5B3E6] shadow-sm transition-all"
                                 />
                             </div>
                             <button
