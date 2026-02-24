@@ -265,7 +265,7 @@ async def generate_from_file(
 
         # Use Unified Generation Service
         generated_data = generation_service.generate_questions_from_text(
-            context_text=text[:MAX_CHARS],  # Increased context significantly for Cloud/Gemini
+            context_text=text,  # Context is already sampled/limited to ~12k chars internal to the logic
             subject_name=subject.name,
             topic_name=topic.name,
             count=count,
