@@ -12,10 +12,12 @@ services:
     region: singapore
     plan: free # Auto-selects Free Tier
     buildCommand: pip install -r backend/requirements.txt
-    startCommand: gunicorn -k uvicorn.workers.UvicornWorker backend.app.main:app
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker --workers 2 --timeout 120 backend.app.main:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0 # Matches dev environment
+      - key: RENDER
+        value: "true" # Enables Render-specific optimizations (disables RAG, Ollama)
       - key: USE_MYSQL
         value: false
       - key: DATABASE_URL

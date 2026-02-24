@@ -133,6 +133,11 @@ async def health_check():
         "timestamp": time.time()
     }
 
+@app.get("/api/ping")
+async def ping():
+    """Ultra-lightweight keep-alive endpoint. No DB or LLM checks."""
+    return {"status": "alive"}
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to AI Exam Oracle API"}

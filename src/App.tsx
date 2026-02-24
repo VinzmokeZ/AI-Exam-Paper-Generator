@@ -4,6 +4,7 @@ import { router } from './routes';
 import { PhoneFrame } from './components/PhoneFrame';
 import { useEffect, useState } from 'react';
 import { discoverConnectivity } from './services/api';
+import { startKeepAlive, stopKeepAlive } from './services/keepAliveService';
 
 export default function App() {
   const [backendReady, setBackendReady] = useState(false);
@@ -14,12 +15,18 @@ export default function App() {
     discoverConnectivity().then((found) => {
       if (!found) {
         console.warn('[App] Backend not found — running in offline mode');
+      } else {
+        // Start keep-alive to prevent Render cold starts while app is open
+        startKeepAlive();
       }
       setBackendReady(true); // Render app regardless (offline fallbacks exist)
     }).catch(err => {
       console.error("FATAL DISCOVERY ERROR", err);
       setBackendReady(true);
     });
+
+    // Stop keep-alive when the component unmounts
+    return () => stopKeepAlive();
   }, []);
 
   if (!backendReady) {
