@@ -104,6 +104,14 @@ def merge_db():
             session.commit()
             print(f" OK ({count} records)")
 
+            # Fix PostgreSQL sequence counters
+            if dest_engine.url.drivername in ['postgresql', 'postgresql+psycopg2']:
+                try:
+                    with dest_engine.begin() as conn:
+                        conn.execute(text(f"SELECT setval('{table_name}_id_seq', COALESCE((SELECT MAX(id)+1 FROM {table_name}), 1), false);"))
+                except Exception as seq_err:
+                    print(f" (Sequence note: {seq_err})")
+
         print("Cloud Sync Complete!")
         
     except Exception as e:
