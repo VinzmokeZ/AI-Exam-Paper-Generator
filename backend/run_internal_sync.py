@@ -40,6 +40,18 @@ def merge_db():
         
         # Destination (PostgreSQL)
         dest_engine = create_engine(cloud_url)
+        
+        from sqlalchemy import text
+        try:
+            print("Upgrading cloud database schema for large text...")
+            with dest_engine.begin() as conn:
+                conn.execute(text("ALTER TABLE questions ALTER COLUMN question_text TYPE TEXT;"))
+                conn.execute(text("ALTER TABLE questions ALTER COLUMN correct_answer TYPE TEXT;"))
+                conn.execute(text("ALTER TABLE questions ALTER COLUMN explanation TYPE TEXT;"))
+            print("Schema upgrade successful.")
+        except Exception as e:
+            print(f"Schema upgrade note (might already be TEXT): {e}")
+
         dest_metadata = MetaData()
         dest_metadata.reflect(bind=dest_engine)
         
