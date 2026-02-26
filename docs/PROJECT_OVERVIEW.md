@@ -1,62 +1,89 @@
 # AI Exam Oracle - Deep-Dive Technical Overview
 
-This document provides a high-level technical breakdown of the **AI Exam Paper Generator** project. It details the scalable architecture, background system optimizations, and intelligent logic that powers the platform.
+This document provides a high-level technical breakdown of the **AI Exam Paper Generator** project. It covers the dual-environment architecture, database sync pipeline, intelligent generation engine, and cloud deployment infrastructure.
 
 ---
 
-## 🏗️ 1. Scalable SQL Architecture (Migration)
-Originally started on SQLite, the project has evolved into a production-ready **MySQL** architecture managed via XAMPP.
+## 🏗️ 1. Dual-Environment Architecture
 
-*   **The Database Shift**: In `migration_script.py`, we implemented a robust ETL (Extract, Transform, Load) process to move data from local SQLite files to a centralized MySQL instance (`ai_exam_oracle`).
-*   **Database Schema**:
-    *   **Subject/Topic/Question**: The core of the academic knowledge.
-    *   **Rubric & Course Outcomes**: Detailed academic constraints for generation.
-    - **User Stats & Activity Logs**: Tracking gamification (XP, Coins, Streaks) and system usage.
-*   **Production Advantage**: Switching to MySQL allows for better concurrency, handled by SQLAlchemy with `pool_pre_ping=True` to prevent connection timeouts.
+The project runs seamlessly in **two independent environments**:
 
----
+| Feature | Local (PC) | Cloud (Render) |
+|---|---|---|
+| **Database** | SQLite (`exam_oracle.db`) | PostgreSQL (Render managed) |
+| **AI Engine** | Ollama (Phi3, Mistral) | Google Gemini API (Direct) |
+| **RAG indexing** | Full (ChromaDB + Sentences) | Query-Only (disabled for RAM) |
+| **Launch Method** | `LAUNCH.bat` | Always-on at Render URL |
 
-## 🔍 2. System Health & Background Audits
-To maintain 100% uptime, the backend includes an automated **Health Service** (`health_service.py`).
-
-*   **Background Audit**: On every startup, `main.py` triggers a background thread that performs a "Full Audit":
-    *   **DB Connectivity**: Checks if the MySQL server is responding.
-    *   **Ollama Status**: Verifies if the local AI engine is running and which models are pulled.
-    *   **Cloud API Status**: Rapidly pings Google Gemini to check for direct API health.
-*   **Detailed Logging**: All system states are recorded in `system_health.log`, allowing developers to trace "degraded" states without crashing the main application.
+Both environments share the same codebase. The backend auto-detects which mode it's in via the `RENDER=true` environment variable.
 
 ---
 
-## 🧠 3. Advanced AI Logic & RAG Variety
-The generation engine doesn't just ask questions—it intelligently picks context.
+## 🔄 2. Cloud Data Sync Pipeline (`run_internal_sync.py`)
 
-### The "Never Fail" Fallback (Round 2)
-In addition to model switching, we've optimized the **Prompt Integrity**:
-- **Cache Purge**: On startup, the `backend_cache/` folder is automatically purged. This prevents "stale" questions from previous failed runs from being re-presented to the user.
-- **Model Selection**: The system defaults to `gemini-2.0-flash-lite` but intelligently falls back to `gemini-1.5-flash` or Local Ollama models based on environmental flags (e.g., Render environment detection).
+A dedicated internal sync script handles migrating all local progress to the Render PostgreSQL cloud database.
 
-### Knowledge Base Variety
-In `rag_service.py`, the new `get_context_from_kb` function introduces **Randomized Context Selection**:
-- Instead of always picking the first 5 paragraphs of a book, the system shuffles the knowledge chunks.
-- **Result**: Even if you ask for "Mitochondria" 10 times, the AI receives slightly different paragraphs each time, resulting in a more diverse and exhaustive question set.
+### How It Works
+1. **GitHub Download**: The script downloads the latest `exam_oracle.db` SQLite binary directly from the GitHub repository.
+2. **Schema Upgrade**: It runs `ALTER TABLE` commands to upgrade text columns (`question_text`, `correct_answer`, `explanation`) from `VARCHAR(2000)` to `TEXT` to support long essay answers.
+3. **Smart Merge**: For each of 14 tables, it performs an **UPSERT** (insert if new, update if exists), preserving all original IDs.
+4. **Data Sanitization**: NUL bytes (`\x00`) from PDF text are stripped before insertion, since PostgreSQL rejects them.
+5. **Sequence Reset**: After migration, PostgreSQL auto-increment sequences are reset via `setval()` so new records don't conflict with imported IDs.
+
+### Trigger
+The sync is triggered via a secure internal endpoint: `GET /api/sync-cloud`.
+
+### Tables Migrated
+`subjects`, `topics`, `knowledge_bases`, `knowledge_chunks`, `documents`, `rubrics`, `rubric_question_distributions`, `rubric_lo_distributions`, `questions`, `user_stats`, `exam_history`, `activity_logs`, `notifications`, `achievements`
 
 ---
 
-## 📊 4. Intelligent Analytics & Dashboard Logic
-The Dashboard is now a data-driven command center, with logic residing in `dashboard.py`.
+## 🧠 3. AI Generation Engine
 
-*   **Performance Tracking**: The "Overall Performance" metric is a dynamic calculation of your `Approved / Total` questions ratio.
-*   **Daily Goals**: The "Today's Progress" ring measures your vetting activity against a daily target (Goal: 5 Approved Questions/Day).
-*   **Analytical Reports**: 
-    *   **LO Coverage**: Aggregates `course_outcomes` data from all questions to show a radar/bar chart of which Learning Outcomes are under-represented.
-    *   **Bloom's Taxonomy Balance**: Maps question tags (Apply, Analyze, etc.) to a percentage distribution, flagging if the exam is too "Remember-heavy."
+### Multi-Model Fallback Chain
+The generation service (`generation_service.py`) uses a cascading fallback strategy:
+
+1. `gemini-2.0-flash-lite` (Primary — fastest, free tier)
+2. `gemini-2.5-flash-lite` (Secondary fallback)
+3. `gemini-2.0-flash` (Tertiary fallback)
+4. Local Ollama models (if available)
+
+If a model hits a `429 Rate Limit` error, the service gracefully catches it and tries the next model in the chain without crashing the server.
+
+### Multi-Chunk PDF Sampling
+Implemented in `generate.py`, the `extract_pdf_smart_chunks` function divides a PDF into three equal sections (Beginning, Middle, End), randomly picks pages from each section, and combines them into a diverse context snippet. This ensures every generation produces unique, non-repetitive questions even from the same document.
+
+### Knowledge Base RAG (Local + Cloud)
+- **Local**: Full ChromaDB vector search using `sentence-transformers` embedding model (`all-MiniLM-L6-v2`).
+- **Cloud (Render)**: Query-only mode using `KnowledgeChunk` database rows. Since embedding models require too much RAM on the free tier, chunks are randomly shuffled and sampled from the PostgreSQL database for variety.
+
+---
+
+## 🔍 4. System Health & Background Audits
+
+On every startup, `main.py` triggers a background thread (`health_service.py`) that performs a Full Audit:
+- **DB Connectivity**: Checks if PostgreSQL/SQLite is responding.
+- **Ollama Status**: Verifies if the local AI model is pulled and accessible.
+- **Cloud API Status**: Pings Google Gemini to verify the API key and quota.
+- **Logging**: All system states are recorded in `system_health.log`.
+
+---
+
+## 📊 5. Intelligent Analytics & Dashboard
+
+The Dashboard (`dashboard.py`) is a data-driven command center:
+- **Performance Metric**: Dynamic `Approved / Total Questions` ratio.
+- **Daily Goal Ring**: Tracks vetting activity against a configurable daily target.
+- **LO Coverage Chart**: Aggregates `course_outcomes` JSON from all questions to show which Learning Outcomes are under-represented.
+- **Bloom's Balance**: Maps question complexity tags to a percentage distribution, alerting if an exam is too "Remember-heavy."
 
 ---
 
 ## 📝 Technical Data Lifecycle
 
-1.  **Startup**: Backend purges cache -> Starts Health Audit -> Connects to MySQL.
-2.  **Input**: Professor uploads a Google Drive link or PDF.
-3.  **RAG**: `KnowledgeBase` entry created -> Background task downloads/chunks -> Embedding vectors saved.
-4.  **Generation**: AI Fallback chain picks the best model -> RAG Variety shuffles context.
-5.  **Analytics**: Vetting results update the `ActivityLog` and `UserStats` tables instantly.
+1. **Startup**: Backend purges `backend_cache/` → Starts Health Audit → Connects to DB.
+2. **Input**: Professor selects a Subject/Topic + uploads a document or picks a Rubric.
+3. **Generation**: AI Fallback chain picks the best available model → Multi-Chunk PDF sampler grabs varied context → RAG shuffles Knowledge Chunks.
+4. **Vetting**: Questions flow into the Vetting Center → Professor approves/rejects.
+5. **Save**: Approved questions saved to `questions` and `exam_history` tables.
+6. **Analytics**: Vetting results instantly update `ActivityLog` and `UserStats`.

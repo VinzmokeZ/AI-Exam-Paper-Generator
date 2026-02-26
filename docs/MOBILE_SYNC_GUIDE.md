@@ -1,44 +1,66 @@
-# 📱 Android Mobile Bridge & Sync Guide
+# 📱 Android Mobile Bridge & Cloud Connection Guide
 
-This guide explains the underlying synchronization and monitoring bridge that connects your Laptop's AI power to your physical Android Phone.
-
----
-
-## 🏗️ 1. The USB ADB Bridge Logic
-The application uses **ADB Reverse** to create a secure, low-latency data tunnel over your USB cable.
-
-### The Backend Connection
-1.  When you run `LAUNCH.bat`, the command `adb reverse tcp:8000 tcp:8000` is executed.
-2.  This maps the phone's `localhost:8000` directly to your laptop's Python API.
-3.  **Encrypted Tunneling**: In some modes (like `FIREBASE_ONE_CLICK.bat`), we also start a Localtunnel, allowing you to access the AI over 5G/WiFi without a cable.
+This guide explains how to connect your Android phone to the AI Exam Oracle backend — both via USB (local PC) and via the Render cloud deployment.
 
 ---
 
-## 🚦 2. Mobile Health Status Indicators
-We've implemented a real-time monitor on the mobile UI to help you debug connectivity.
+## 🏗️ Option A: USB ADB Bridge (Local PC Mode)
 
-### The Cyan Pulse (The "Heartbeat")
-- **Active Cyan**: Means the background **System Audit** (`health_service.py`) successfully talked to the phone. 
-- **Dim/Gray**: Means the ADB Reverse connection is broken.
-- **Flashing**: Means the AI is currently pulling a model or processing a large Knowledge Base.
+When working locally, your phone connects to your laptop's AI engine via ADB.
 
-### Why does it matter?
-Because the Android APK is a hybrid app (Capacitor), it relies on the laptop being "Online" for any AI generation. If the light is off, the **Vetting Center** and **History** will show "Network Error."
+### How It Works
+1. Run `LAUNCH.bat` on your PC. This executes:
+   - `adb reverse tcp:8000 tcp:8000` — maps the phone's `localhost:8000` directly to your PC's Python API.
+2. The Android APK communicates with the backend via `http://localhost:8000`.
+3. No internet is required. All AI runs locally via Ollama.
 
----
-
-## 🔄 3. Using `ANDROID_FULL_SYNC.bat`
-This script is your "One-Click Deploy" for code changes.
-
-### What it updates:
-1.  **Frontend Logic**: Moves updated TSX/JSX logic into the APK.
-2.  **UI Adjustments**: Pushes new CSS, animations (Framer Motion), and responsive layouts.
-3.  **Knowledge Base Links**: Synchronizes the list of active Google Drive links to the phone.
+### Status Indicators
+- **Cyan Pulse (Active)**: ADB bridge is live; the backend is responding.
+- **Dim/Gray**: ADB connection is broken — replug the USB cable.
+- **Flashing**: AI is actively generating or pulling a model.
 
 ---
 
-## 🛠️ 4. Mobile Troubleshooting
-If generation fails on the phone but works on the PC:
-1.  **Check Developer Options**: Ensure "USB Debugging" is still ON.
-2.  **Toggle the Engine**: Try switching from **Local** to **Cloud** on the Dashboard; sometimes the phone's RAM cannot handle local LLM overhead if the bridge is unstable.
-3.  **Clean Cache**: Run the sync script to purge stale Android build assets.
+## ☁️ Option B: Render Cloud Mode (No Cable Needed!)
+
+Your app is permanently deployed at:
+> **https://ai-exam-paper-generator-i6iz.onrender.com**
+
+To switch your phone to the cloud:
+1. Open the app.
+2. Go to the **Diagnostic Console** (tap the connection status icon).
+3. Paste the Render URL and tap **"Probe / Discovery"**.
+4. The app will lock onto the cloud backend and show `✅ SUCCESS`.
+
+### What Works on Cloud
+- Question Generation (via Google Gemini API)
+- Vetting Center (save/reject questions to cloud DB)
+- Exam History
+- Dashboard Stats
+- Knowledge Library (read-only — no new PDF indexing)
+
+---
+
+## 🔄 Syncing Local Progress to Cloud
+
+When you've been working locally and want to push your progress to the cloud:
+
+1. Make sure your local database (`exam_oracle.db`) is committed to GitHub.
+2. Visit: **https://ai-exam-paper-generator-i6iz.onrender.com/api/sync-cloud**
+3. Wait for: `Cloud Sync Complete!`
+
+This will securely copy all your local Subjects, Topics, Questions, PDFs, Rubrics, XP, and History to the live PostgreSQL database on Render.
+
+> **Note**: Run `/api/fix-seq` immediately after a sync if you encounter any `duplicate key` errors when saving new questions.
+
+---
+
+## 🛠️ Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| Generation fails: "Quota exceeded" | Switch Render `GOOGLE_API_KEY` to a fresh key in the Render dashboard |
+| Can't save vetted questions (500 error) | Visit `/api/fix-seq` to reset PostgreSQL auto-increment counters |
+| Phone shows "Network Error" on local mode | Replug USB cable → re-run `LAUNCH.bat` |
+| Cloud app slow to respond | Normal — Render free tier "sleeps" after 15 min of inactivity |
+| RAG doesn't read PDFs on cloud | Expected — index locally first, then sync via `/api/sync-cloud` |
