@@ -47,7 +47,7 @@ def merge_db():
         session = Session()
 
         tables_to_migrate = [
-            "subjects", "topics", "rubrics", "rubric_question_distributions", 
+            "subjects", "topics", "knowledge_bases", "documents", "rubrics", "rubric_question_distributions", 
             "rubric_lo_distributions", "questions", "user_stats", 
             "exam_history", "activity_logs", "notifications", "achievements"
         ]
