@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Save, X, Target, BookOpen, AlertTriangle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { rubricService, RubricCreate } from '../services/rubricService';
-import { subjectService, api, connectionLogs, discoverConnectivity } from '../services/api';
+import { knowledgeBaseService, api, connectionLogs, discoverConnectivity, KnowledgeBase } from '../services/api';
 import { Modal } from './Modal';
 import { ChevronDown } from 'lucide-react';
 
@@ -15,18 +15,18 @@ export function CreateRubric() {
   // Rubric metadata
   const [rubricName, setRubricName] = useState('');
   const [duration, setDuration] = useState(180); // minutes
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
+  const [selectedKb, setSelectedKb] = useState('');
+  const [selectedKbId, setSelectedKbId] = useState<number | null>(null);
   const [isBackendOnline, setIsBackendOnline] = useState(false);
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
 
 
-  const [subjects, setSubjects] = useState<any[]>([]);
+  const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([]);
 
-  // Load subjects on mount
+  // Load knowledge bases on mount
   useEffect(() => {
-    loadSubjects();
+    loadKnowledgeBases();
     checkConnection();
   }, []);
 
@@ -43,27 +43,16 @@ export function CreateRubric() {
     }
   };
 
-  const loadSubjects = async () => {
+  const loadKnowledgeBases = async () => {
     try {
-      const data = await subjectService.getAll();
-
-      // Merge logic: Combine DEFAULT_SUBJECTS with backend subjects
-      const { DEFAULT_SUBJECTS } = await import('../constants/defaultData');
-      const backendCodes = new Set(data.map((s: any) => s.code.toUpperCase()));
-      const uniqueDefaults = DEFAULT_SUBJECTS.filter(d => !backendCodes.has(d.code.toUpperCase()));
-      const combined = [...uniqueDefaults, ...data];
-
-      setSubjects(combined);
-      if (combined.length > 0) {
-        setSelectedSubjectId(Number(combined[0].id));
-        setSelectedSubject(combined[0].name);
+      const data = await knowledgeBaseService.getAll();
+      setKnowledgeBases(data);
+      if (data.length > 0) {
+        setSelectedKbId(data[0].id);
+        setSelectedKb(data[0].title);
       }
     } catch (err) {
-      console.error('Failed to load subjects:', err);
-      const { DEFAULT_SUBJECTS } = await import('../constants/defaultData');
-      setSubjects(DEFAULT_SUBJECTS);
-      setSelectedSubjectId(Number(DEFAULT_SUBJECTS[0].id));
-      setSelectedSubject(DEFAULT_SUBJECTS[0].name);
+      console.error('Failed to load knowledge bases:', err);
     }
   };
 
@@ -117,8 +106,8 @@ export function CreateRubric() {
       return;
     }
 
-    if (!selectedSubjectId) {
-      alert('Please select a subject');
+    if (!selectedKbId) {
+      alert('Please select a knowledge context');
       return;
     }
 
@@ -131,7 +120,7 @@ export function CreateRubric() {
     try {
       const rubricData: RubricCreate = {
         name: rubricName,
-        subject_id: selectedSubjectId,
+        kb_id: selectedKbId,
         exam_type: 'Final',
         duration_minutes: duration,
         ai_instructions: '',
@@ -272,26 +261,26 @@ export function CreateRubric() {
             />
           </div>
 
-          {/* Subject Selector */}
+          {/* Knowledge Context Selector */}
           <div className="bg-[#0A1F1F] rounded-2xl p-4 border-2 border-[#0D3D3D] mt-4">
             <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-2 block">
-              Subject
+              Knowledge Context
             </label>
             <div className="relative">
               <select
-                value={selectedSubjectId || ''}
+                value={selectedKbId || ''}
                 onChange={(e) => {
                   const id = parseInt(e.target.value);
-                  setSelectedSubjectId(id);
-                  const subject = subjects.find(s => s.id === id);
-                  if (subject) setSelectedSubject(subject.name);
+                  setSelectedKbId(id);
+                  const kb = knowledgeBases.find(k => k.id === id);
+                  if (kb) setSelectedKb(kb.title);
                 }}
                 className="w-full bg-[#0D3D3D] rounded-xl px-4 py-3 text-[#F5F1ED] text-sm outline-none font-bold appearance-none cursor-pointer"
               >
-                <option value="" disabled>Select a subject</option>
-                {subjects.map(subject => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name} ({subject.code})
+                <option value="" disabled>Select a context</option>
+                {knowledgeBases.map(kb => (
+                  <option key={kb.id} value={kb.id}>
+                    {kb.title}
                   </option>
                 ))}
               </select>
@@ -1067,16 +1056,8 @@ export function CreateRubric() {
               </div>
             </div>
             <div>
-              <p className="text-xs text-[#8B9E9E] mb-1">Subject:</p>
-              <select
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="w-full bg-[#0D3D3D] rounded-lg px-3 py-1.5 text-sm font-bold text-[#F5F1ED] border-2 border-[#0A1F1F] outline-none"
-              >
-                <option value="CS301">CS301</option>
-                <option value="MATH101">MATH101</option>
-                <option value="PHYS202">PHYS202</option>
-              </select>
+              <p className="text-xs text-[#8B9E9E] mb-1">Context:</p>
+              <p className="text-sm font-bold text-[#F5F1ED] truncate">{selectedKb || 'None Selected'}</p>
             </div>
           </div>
         </motion.div>

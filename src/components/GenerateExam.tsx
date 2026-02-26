@@ -19,6 +19,14 @@ interface LocationState {
   rubricName?: string;
 }
 
+interface ContextOption {
+  id: string | number;
+  name: string;
+  code: string;
+  is_kb?: boolean;
+  kb_id?: number;
+}
+
 export function GenerateExam() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -29,7 +37,7 @@ export function GenerateExam() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   /* Core State */
-  const [subjects, setSubjects] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<ContextOption[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState('CS301');
   const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
@@ -45,6 +53,9 @@ export function GenerateExam() {
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [selectedContextId, setSelectedContextId] = useState<number | null>(null);
+  const [questionCount, setQuestionCount] = useState(5);
+  const [customCount, setCustomCount] = useState('');
+  const [isCustomCount, setIsCustomCount] = useState(false);
 
   useEffect(() => {
     loadRubrics();
@@ -99,34 +110,55 @@ export function GenerateExam() {
   const loadSubjects = async () => {
     setIsLoadingSubjects(true);
     try {
-      const data = await subjectService.getAll();
+      // Fetch legacy subjects and knowledge contexts in parallel
+      const [subjectsData, contextsResponse] = await Promise.all([
+        subjectService.getAll(),
+        api.get('/rag/documents')
+      ]);
 
-      // Merge logic: Combine DEFAULT_SUBJECTS with backend subjects
-      const backendCodes = new Set(data.map(s => s.code.toUpperCase()));
-      const uniqueDefaults = DEFAULT_SUBJECTS.filter(d => !backendCodes.has(d.code.toUpperCase()));
-      const combined = [...uniqueDefaults, ...data];
+      const contexts = (contextsResponse.data as any[]).filter(c => c.status === 'completed');
+
+      // Map contexts to "subject-like" objects
+      const contextSubjects = contexts.map(c => ({
+        id: `kb_${c.id}`,
+        kb_id: c.id,
+        name: c.title,
+        code: 'LIBRARY',
+        is_kb: true
+      }));
+
+      // Merge logic: Only show Library Contexts. 
+      // We also keep "Uploaded Content" if it exists in backend subjects as a special catch-all.
+      const uploadedContentSubject = subjectsData.find(s => s.name === "Uploaded Content");
+
+      const combined: ContextOption[] = [...contextSubjects];
+      if (uploadedContentSubject) {
+        combined.push(uploadedContentSubject);
+      }
 
       setSubjects(combined);
 
       if (combined.length > 0) {
-        // If we have a returned subject ID, use it, otherwise default
+        // Selection priority: State Subject ID -> Context Selector ID -> First item
         const returnedId = state?.subjectId;
         if (returnedId) {
           const sub = combined.find(s => s.id.toString() === returnedId.toString());
           if (sub) {
             setSelectedSubjectId(sub.id);
-            setSelectedSubject(sub.code);
+            if (sub.is_kb && sub.kb_id) setSelectedContextId(sub.kb_id);
           }
+        } else if (selectedContextId) {
+          const sub = combined.find(s => s.id === `kb_${selectedContextId}`);
+          if (sub) setSelectedSubjectId(sub.id);
         } else {
           setSelectedSubjectId(combined[0].id);
-          setSelectedSubject(combined[0].code);
+          if (combined[0].is_kb && combined[0].kb_id) setSelectedContextId(combined[0].kb_id);
         }
       }
     } catch (error) {
-      console.error('Failed to load subjects', error);
+      console.error('Failed to load subjects/contexts', error);
       setSubjects(DEFAULT_SUBJECTS);
       setSelectedSubjectId(DEFAULT_SUBJECTS[0].id);
-      setSelectedSubject(DEFAULT_SUBJECTS[0].code);
     } finally {
       setIsLoadingSubjects(false);
     }
@@ -187,7 +219,10 @@ export function GenerateExam() {
       };
 
       await animateProgress(40, 1000);
-      const effectiveEngine = engineOverride || activeModel || 'local';
+      const userPref = localStorage.getItem('ai_engine_mode');
+      const effectiveEngine = engineOverride || (userPref !== 'local' ? userPref : activeModel) || 'cloud';
+
+      console.log(`[FRONTEND] Generating from Rubric with engine: ${effectiveEngine}`);
       const engineLabel = effectiveEngine === 'cloud' ? 'Gemini Cloud' : 'Ollama';
       setCurrentStatus(`Generating via ${engineLabel}...`);
 
@@ -231,7 +266,7 @@ export function GenerateExam() {
     }
 
     if (!subject) {
-      toast.error("Subject context missing. Still loading or invalid ID.");
+      toast.error("Knowledge Context missing. Still loading or invalid ID.");
       setGenerationStep('selecting');
       return;
     }
@@ -336,7 +371,7 @@ export function GenerateExam() {
     const CIRC = 2 * Math.PI * R; // ≈ 603
 
     return (
-      <div className="fixed inset-0 z-[100] flex flex-col bg-[#0A1F1F]">
+      <div className="fixed inset-0 z-[10000] flex flex-col bg-[#0A1F1F]">
         {/* Ambient radial background */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_30%,_#0D2E2E_0%,_#0A1F1F_70%)]" />
 
@@ -568,14 +603,19 @@ export function GenerateExam() {
           <motion.button
             whileHover={{ scale: 1.05, y: -5 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/vetting', {
-              state: {
-                questions: generatedQuestions,
-                subjectName: state?.subjectName || selectedSubject,
-                topicName: 'AI Generated Exam',
-                rubricName: savedRubrics.find(r => r.id === selectedRubric)?.name
-              }
-            })}
+            onClick={() => {
+              const currentSubjectObj = subjects.find(s => s.id.toString() === selectedSubjectId?.toString());
+              const resolvedSubjectName = currentSubjectObj ? currentSubjectObj.name : 'General';
+
+              navigate('/vetting', {
+                state: {
+                  questions: generatedQuestions,
+                  subjectName: state?.subjectName || resolvedSubjectName,
+                  topicName: savedRubrics.find(r => r.id === selectedRubric)?.name || 'AI Generated Exam',
+                  rubricName: savedRubrics.find(r => r.id === selectedRubric)?.name
+                }
+              });
+            }}
             className="w-full bg-[#0A1F1F] text-white rounded-[32px] py-7 font-black text-xl shadow-2xl flex items-center justify-center gap-4 group"
           >
             <span>VET NOW</span>
@@ -588,14 +628,14 @@ export function GenerateExam() {
 
   if (isLoadingSubjects) {
     return (
-      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-[#0A1F1F]">
+      <div className="fixed inset-0 z-[10000] flex flex-col items-center justify-center p-6 bg-[#0A1F1F]">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
           className="w-16 h-16 border-4 border-[#C5B3E6]/20 border-t-[#C5B3E6] rounded-full mb-6"
         />
         <h2 className="text-xl font-bold text-white mb-2 italic tracking-tighter">INITIALIZING VAULT</h2>
-        <p className="text-xs font-black text-[#8B9E9E] opacity-50 uppercase tracking-[0.2em]">Preparing subject context...</p>
+        <p className="text-xs font-black text-[#8B9E9E] opacity-50 uppercase tracking-[0.2em]">Preparing knowledge context...</p>
       </div>
     );
   }
@@ -674,7 +714,7 @@ export function GenerateExam() {
               {/* Subject Selection */}
               <div className="bg-[#0A1F1F] rounded-2xl p-4">
                 <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-2 block">
-                  Select Subject
+                  Knowledge Context (Library)
                 </label>
                 <select
                   value={selectedSubjectId || ''}
@@ -684,15 +724,63 @@ export function GenerateExam() {
                     if (sub) {
                       setSelectedSubjectId(sub.id);
                       setSelectedSubject(sub.code);
+                      if (sub.is_kb && sub.kb_id) {
+                        setSelectedContextId(sub.kb_id);
+                      } else {
+                        setSelectedContextId(null);
+                      }
                     }
                   }}
                   className="w-full bg-[#0D2626] rounded-xl px-4 py-3 text-[#F5F1ED] text-sm border-2 border-[#0A1F1F] outline-none transition-all focus:border-[#C5B3E6]"
                 >
                   {subjects.map(s => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.code})</option>
+                    <option key={s.id} value={s.id}>{s.name}</option>
                   ))}
-                  {subjects.length === 0 && <option value="">No Subjects</option>}
+                  {subjects.length === 0 && <option value="">No Contexts Found</option>}
                 </select>
+
+                <div className="mt-4">
+                  <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-2 block">
+                    Question Quantity
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {[5, 10, 15, 20].map((num) => (
+                      <button
+                        key={num}
+                        onClick={() => {
+                          setQuestionCount(num);
+                          setIsCustomCount(false);
+                        }}
+                        className={`flex-1 min-w-[50px] py-2 rounded-xl text-xs font-bold transition-all border-2 ${questionCount === num && !isCustomCount
+                          ? 'bg-[#C5B3E6] border-[#C5B3E6] text-white'
+                          : 'bg-[#0D2626] border-[#0D2626] text-[#8B9E9E]'
+                          }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                    <div className="flex-1 min-w-[100px] relative">
+                      <input
+                        type="number"
+                        placeholder="Custom"
+                        value={customCount}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomCount(val);
+                          setIsCustomCount(true);
+                          const num = parseInt(val);
+                          if (!isNaN(num) && num > 0) setQuestionCount(num);
+                        }}
+                        className={`w-full py-2 px-3 rounded-xl text-xs font-bold bg-[#0D2626] border-2 outline-none transition-all placeholder:text-[#8B9E9E]/30 ${isCustomCount ? 'border-[#C5B3E6] text-white' : 'border-[#0D2626] text-[#8B9E9E]'}`}
+                      />
+                      {isCustomCount && (
+                        <div className="absolute -top-6 right-0 text-[8px] font-bold text-[#FF6AC1] animate-pulse">
+                          STABILITY LIMIT: 40
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>
@@ -702,6 +790,10 @@ export function GenerateExam() {
             <ContextSelector
               onSelect={setSelectedContextId}
               selectedId={selectedContextId}
+              onInstantGenerate={(kbId) => {
+                setSelectedContextId(kbId);
+                handleAIGenerate(`Generate ${questionCount} MCQ questions based on this document context.`);
+              }}
             />
           </div>
 
@@ -712,7 +804,7 @@ export function GenerateExam() {
               onClick={(e) => {
                 e.stopPropagation();
                 if (!selectedSubjectId) {
-                  toast.error("Please select a subject first!");
+                  toast.error("Please select a knowledge context first!");
                   return;
                 }
                 setShowAIPrompt(true);
@@ -749,79 +841,82 @@ export function GenerateExam() {
 
           {/* Saved Rubrics */}
           <div className="px-6 space-y-4">
-            {savedRubrics.slice(0, 3).map((rubric, index) => (
-              <motion.div
-                key={rubric.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.15 + index * 0.05 }}
-                onClick={() => setSelectedRubric(rubric.id)}
-                className={`rounded-[32px] p-6 border-4 cursor-pointer transition-all ${selectedRubric === rubric.id
-                  ? 'bg-[#C5B3E6] border-[#B8A5D9] shadow-inner'
-                  : 'bg-[#F5F1ED] border-[#E5DED6] shadow-md'
-                  }`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 ${selectedRubric === rubric.id
-                    ? 'bg-[#0A1F1F] border-[#0D2626]'
-                    : 'bg-[#0D2626] border-[#0A1F1F]'
-                    }`}>
-                    <FileText className="w-7 h-7 text-[#C5B3E6]" />
-                  </div>
-
-                  <div className="flex-1">
-                    <h3 className="font-bold text-[#0A1F1F] text-lg mb-1">{rubric.name}</h3>
-                    <div className="flex items-center gap-3 text-[10px] font-black uppercase opacity-40 text-[#0A1F1F]">
-                      <span className="bg-black/5 px-2 py-1 rounded-md">{rubric.total_marks} Marks</span>
-                      <span>•</span>
-                      <span className="bg-black/5 px-2 py-1 rounded-md">{(rubric.question_distributions || []).reduce((acc: number, q: any) => acc + q.count, 0) || 0} Questions</span>
+            {savedRubrics
+              .filter(rubric => !selectedContextId || rubric.kb_id === selectedContextId)
+              .sort((a, b) => b.id - a.id)
+              .map((rubric, index) => (
+                <motion.div
+                  key={rubric.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.15 + index * 0.05 }}
+                  onClick={() => setSelectedRubric(rubric.id)}
+                  className={`rounded-[32px] p-6 border-4 cursor-pointer transition-all ${selectedRubric === rubric.id
+                    ? 'bg-[#C5B3E6] border-[#B8A5D9] shadow-inner'
+                    : 'bg-[#F5F1ED] border-[#E5DED6] shadow-md'
+                    }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border-4 ${selectedRubric === rubric.id
+                      ? 'bg-[#0A1F1F] border-[#0D2626]'
+                      : 'bg-[#0D2626] border-[#0A1F1F]'
+                      }`}>
+                      <FileText className="w-7 h-7 text-[#C5B3E6]" />
                     </div>
-                  </div>
 
-                  <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => handleDeleteRubric(rubric.id, e)}
-                    className="w-10 h-10 bg-[#FF6AC1]/10 rounded-xl flex items-center justify-center border border-[#FF6AC1]/20 hover:bg-[#FF6AC1]/20 transition-colors"
-                  >
-                    <Trash2 className="w-5 h-5 text-[#FF6AC1]" />
-                  </motion.button>
-                </div>
-
-                {selectedRubric === rubric.id && (
-                  <div className="grid grid-cols-2 gap-3 mt-4">
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleGenerateFromRubric(rubric.id, "", null, 'cloud');
-                      }}
-                      className="bg-[#0A1F1F] rounded-2xl py-4 text-[#50FA7B] font-black text-xs flex items-center justify-center gap-2 shadow-xl border-2 border-[#50FA7B]/20"
-                    >
-                      <Zap className="w-3.5 h-3.5 fill-[#50FA7B]" />
-                      <span>FLASH GENERATE</span>
-                    </motion.button>
+                    <div className="flex-1">
+                      <h3 className="font-bold text-[#0A1F1F] text-lg mb-1">{rubric.name}</h3>
+                      <div className="flex items-center gap-3 text-[10px] font-black uppercase opacity-40 text-[#0A1F1F]">
+                        <span className="bg-black/5 px-2 py-1 rounded-md">{rubric.total_marks} Marks</span>
+                        <span>•</span>
+                        <span className="bg-black/5 px-2 py-1 rounded-md">{(rubric.question_distributions || []).reduce((acc: number, q: any) => acc + q.count, 0) || 0} Questions</span>
+                      </div>
+                    </div>
 
                     <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setRubricPromptContext(rubric.id);
-                        setShowAIPrompt(true);
-                      }}
-                      className="bg-[#0A2F2F] rounded-2xl py-4 text-[#C5B3E6] font-black text-xs flex items-center justify-center gap-2 shadow-xl border-2 border-white/10"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) => handleDeleteRubric(rubric.id, e)}
+                      className="w-10 h-10 bg-[#FF6AC1]/10 rounded-xl flex items-center justify-center border border-[#FF6AC1]/20 hover:bg-[#FF6AC1]/20 transition-colors"
                     >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>CUSTOM PROMPT</span>
+                      <Trash2 className="w-5 h-5 text-[#FF6AC1]" />
                     </motion.button>
                   </div>
-                )}
-              </motion.div>
-            ))}
+
+                  {selectedRubric === rubric.id && (
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGenerateFromRubric(rubric.id, "", null, 'cloud');
+                        }}
+                        className="bg-[#0A1F1F] rounded-2xl py-4 text-[#50FA7B] font-black text-xs flex items-center justify-center gap-2 shadow-xl border-2 border-[#50FA7B]/20"
+                      >
+                        <Zap className="w-3.5 h-3.5 fill-[#50FA7B]" />
+                        <span>FLASH GENERATE</span>
+                      </motion.button>
+
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRubricPromptContext(rubric.id);
+                          setShowAIPrompt(true);
+                        }}
+                        className="bg-[#0A2F2F] rounded-2xl py-4 text-[#C5B3E6] font-black text-xs flex items-center justify-center gap-2 shadow-xl border-2 border-white/10"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>CUSTOM PROMPT</span>
+                      </motion.button>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
           </div>
 
           {/* Quick Generate Option (Create Rubric) */}
@@ -871,6 +966,6 @@ export function GenerateExam() {
           />
         )}
       </AnimatePresence>
-    </div>
+    </div >
   );
 }

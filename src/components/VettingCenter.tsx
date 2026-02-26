@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Check, X, Edit2, Send, Target, ArrowLeft, CheckCircle2, Zap, FileText } from 'lucide-react';
@@ -11,7 +11,7 @@ const defaultQuestions = [
     id: 1,
     type: 'MCQ',
     question: 'What is the time complexity of binary search?',
-    options: ['O(n)', 'O(log n)', 'O(n²)', 'O(1)'],
+    options: ['O(n)', 'O(log n)', 'O(n┬▓)', 'O(1)'],
     correctAnswer: 1,
     subject: 'Computer Science',
     courseOutcomes: { co1: 1, co2: 3, co3: 2, co4: 1, co5: 3 },
@@ -161,7 +161,8 @@ export function VettingCenter() {
         payloadSubject,
         payloadTopic,
         approved,
-        state?.duration || 60
+        state?.duration || 60,
+        rejected
       );
 
       if (approved.length === 0) {
@@ -333,13 +334,20 @@ export function VettingCenter() {
               <div className="space-y-3 mb-6">
                 {currentQuestion.options?.map((option: any, index: any) => {
                   const isOptionCorrect = () => {
+                    // Handle numeric index (default/demo questions)
                     if (typeof currentQuestion.correctAnswer === 'number') {
                       return index === currentQuestion.correctAnswer;
                     }
-                    if (!currentQuestion.correct_answer || !option) return false;
+                    if (!currentQuestion.correct_answer) return false;
+                    const ansStr = String(currentQuestion.correct_answer).trim().toUpperCase();
                     const optStr = String(option).trim();
-                    const ansStr = String(currentQuestion.correct_answer).trim();
 
+                    // Letter-based: "A"→0, "B"→1, "C"→2, "D"→3 (AI always returns a single letter)
+                    const letterMap: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 };
+                    const ansLetter = ansStr.charAt(0);
+                    if (ansLetter in letterMap && letterMap[ansLetter] === index) return true;
+
+                    // Fallback: full text comparison
                     if (optStr === ansStr) return true;
                     if (optStr.startsWith(ansStr + '.') || optStr.startsWith(ansStr + ')')) return true;
 

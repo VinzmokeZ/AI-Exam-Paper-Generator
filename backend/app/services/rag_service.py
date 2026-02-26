@@ -160,7 +160,7 @@ class RAGService:
         col = self.collection
         if col is None:
             print("[RAG] ⚠️ Local collection is None. Skipping local query.")
-            return self.fetch_wikipedia_context(query)
+            return []
             
         try:
             results = col.query(
@@ -174,11 +174,6 @@ class RAGService:
         except Exception as e:
             print(f"[RAG] Internal Query Failure: {e}")
             
-        # Wikipedia Fallback
-        wiki_context = self.fetch_wikipedia_context(query.replace("Questions about ", ""))
-        if wiki_context:
-            return wiki_context
-            
         return []
 
     async def process_knowledge_base(self, kb: KnowledgeBase, db: Session):
@@ -191,6 +186,16 @@ class RAGService:
         
         if not text:
             print(f"[RAG] ❌ No text extracted for KB: {kb.title}")
+            kb.status = "failed"
+            kb.error_message = "Could not extract text. Make sure the link is a public PDF file, not a folder or restricted link."
+            db.commit()
+            return
+
+        if len(text.strip()) < 10:
+            print(f"[RAG] ⚠️ Extracted text is too short for KB: {kb.title}")
+            kb.status = "failed"
+            kb.error_message = "The document appears to be empty or contains non-readable images."
+            db.commit()
             return
 
         # Simple chunking logic
@@ -206,62 +211,87 @@ class RAGService:
             db.add(chunk)
         
         db.commit()
+        kb.status = "completed"
+        kb.is_processed = True
+        db.commit()
         print(f"[RAG] ✅ Processed {len(chunks)} chunks for KB: {kb.title}")
 
     def _process_drive_link(self, url: str) -> str:
-        """Extracts text from a Google Drive PDF link."""
+        """Extracts text from a Google Drive PDF link with better error handling."""
         file_id = self._extract_drive_id(url)
         if not file_id:
             print(f"[RAG] ❌ Could not extract file ID from: {url}")
             return ""
         
-        # Construct direct download link
+        # Try both direct download and gdrive-direct formats
+        api_key = os.getenv("GOOGLE_DRIVE_API_KEY") # Optional if file is public
         download_url = f"https://docs.google.com/uc?export=download&id={file_id}"
-        
+        if api_key:
+            download_url += f"&key={api_key}"
+
+        print(f"[RAG] Downloading Drive file: {file_id}")
         try:
-            response = requests.get(download_url, timeout=30)
+            # We use a stream to avoid loading huge files into memory
+            response = requests.get(download_url, timeout=45, stream=True)
             if response.status_code != 200:
-                print(f"[RAG] ❌ Drive download failed: {response.status_code}")
+                # Common issue: Drive link is a folder or restricted
+                print(f"[RAG] ❌ Drive download failed: {response.status_code}. Make sure the link is 'Anyone with the link' and it's a FILE, not a folder.")
                 return ""
             
-            # Save temporary file to read
             temp_path = f"temp_{file_id}.pdf"
             with open(temp_path, "wb") as f:
-                f.write(response.content)
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
             
-            # Extract text using PyPDF2 (already in requirements)
             from PyPDF2 import PdfReader
-            reader = PdfReader(temp_path)
             text = ""
-            for page in reader.pages:
-                text += page.extract_text() + "\n"
+            try:
+                reader = PdfReader(temp_path)
+                for page in reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
+            except Exception as pdf_err:
+                print(f"[RAG] ❌ PDF Parsing Error for {file_id}: {pdf_err}")
             
             # Cleanup
-            os.remove(temp_path)
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+                
             return text
         except Exception as e:
-            print(f"[RAG] ❌ Error processing Drive link: {e}")
+            print(f"[RAG] ❌ Drive processing error: {e}")
             return ""
 
     def _extract_drive_id(self, url: str) -> Optional[str]:
-        """Regex to find Google Drive file ID."""
+        """Regex to find Google Drive file ID from various link formats."""
         patterns = [
-            r'[-\w]{25,}', # Generic ID match
-            r'd/([-\w]{25,})',
-            r'id=([-\w]{25,})'
+            r'/d/([-\w]{25,})',            # /d/ID/view
+            r'id=([-\w]{25,})',            # ?id=ID
+            r'/file/d/([-\w]{25,})',       # /file/d/ID
+            r'drive\.google\.com/open\?id=([-\w]{25,})' # open?id=ID
         ]
         for pattern in patterns:
             match = re.search(pattern, url)
             if match:
-                # If it's the more specific match, the ID is in group 1
-                return match.group(1) if len(match.groups()) > 0 else match.group(0)
+                return match.group(1)
+        
+        # Fallback for raw ID strings
+        if len(url) >= 25 and re.match(r'^[-\w]+$', url):
+            return url
+            
         return None
 
     def get_context_from_kb(self, kb_id: int, query: str, db: Session, n_results: int = 5) -> List[str]:
-        """Retrieves relevant chunks from a specific KnowledgeBase."""
-        # For now, since we haven't implemented full vector search in SQL yet, 
-        # we'll do a simple keyword match or just return top chunks.
-        # Once pgvector is up, this will be a vector search.
-        chunks = db.query(KnowledgeChunk).filter(KnowledgeChunk.kb_id == kb_id).limit(n_results).all()
-        return [c.content for c in chunks]
-
+        """Retrieves relevant chunks from a specific KnowledgeBase using random variety."""
+        import random
+        all_chunks = db.query(KnowledgeChunk).filter(KnowledgeChunk.kb_id == kb_id).all()
+        if not all_chunks:
+            return []
+            
+        # Shuffle for variety so it doesn't always pick the first few paragraphs
+        random.shuffle(all_chunks)
+        selected_chunks = all_chunks[:n_results]
+        
+        print(f"[RAG] 🎲 Randomly selected {len(selected_chunks)} chunks for variety from KB: {kb_id}")
+        return [c.content for c in selected_chunks]

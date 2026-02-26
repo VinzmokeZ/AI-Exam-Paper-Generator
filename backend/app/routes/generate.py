@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+﻿from fastapi import APIRouter, Depends
 from ..services.generation_service import generation_service
 from pydantic import BaseModel
 from typing import List
@@ -12,11 +12,11 @@ def extract_pdf_smart_chunks(reader, chunk_size: int = 4000, num_chunks: int = 3
     Divides the PDF into equal sections (beginning, middle, end),
     picks random pages from each section, and combines the text.
     This ensures every generation covers DIFFERENT topics from across
-    the whole document — unique and varied each time.
+    the whole document ΓÇö unique and varied each time.
     """
     total_pages = len(reader.pages)
 
-    # Small document — just read it all, no need to sample
+    # Small document ΓÇö just read it all, no need to sample
     if total_pages <= num_chunks * 2:
         text = ""
         for page in reader.pages:
@@ -43,7 +43,7 @@ def extract_pdf_smart_chunks(reader, chunk_size: int = 4000, num_chunks: int = 3
 
         if chunk_text.strip():
             label = section_labels[i] if i < len(section_labels) else f"Section {i+1}"
-            collected.append(f"[Document Section — {label} (pages ~{start_page+1}+)]\n{chunk_text[:chunk_size]}")
+            collected.append(f"[Document Section ΓÇö {label} (pages ~{start_page+1}+)]\n{chunk_text[:chunk_size]}")
 
     return "\n\n---\n\n".join(collected)
 
@@ -65,6 +65,7 @@ class BulkSaveRequest(BaseModel):
     questions: List[dict]
     marks: int = None
     duration: int = 60
+    rejected_questions: List[dict] = []
 
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -72,6 +73,7 @@ from ..models import Question, Topic, Subject
 
 @router.post("/questions")
 def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
+    print(f"[BACKEND] Generate Questions: Subject={request.subject_name}, Topic={request.topic_name}, Engine={request.engine}")
     try:
         # 1. Generate via Unified AI Service (handles Local/Cloud/Fallback automatically)
         generated_data = generation_service.generate_questions(
@@ -83,7 +85,8 @@ def generate_questions(request: GenerateRequest, db: Session = Depends(get_db)):
             request.rubric,
             request.engine,
             request.custom_prompt,
-            request.fresh
+            request.fresh,
+            kb_id=request.kb_id   # ← was missing! KB context now flows through
         )
 
         # 2. Add temporary IDs for frontend pairing
@@ -116,12 +119,13 @@ async def generate_from_rubric(
     db: Session = Depends(get_db)
 ):
     """
-    Generate exam questions based on a saved rubric
-    Applies all rubric constraints including question types and LO distribution
-    Optionally includes file context and custom prompt instructions.
+    Generate exam questions based on a saved rubric.
+    Runs generation in a background thread to avoid blocking FastAPI's event loop.
     """
+    import asyncio
     from ..services.generation_service import generation_service
     
+    print(f"[BACKEND] Generate from Rubric: ID={rubric_id}, Engine={engine}, CustomPrompt={bool(custom_prompt)}")
     context_text = None
     if file:
         try:
@@ -137,7 +141,7 @@ async def generate_from_rubric(
                 from PyPDF2 import PdfReader
                 reader = PdfReader(file_path)
                 text = extract_pdf_smart_chunks(reader, chunk_size=4000, num_chunks=3)
-                print(f"[File] Smart-sampled PDF: {len(reader.pages)} pages → {len(text)} chars from 3 random sections")
+                print(f"[File] Smart-sampled PDF: {len(reader.pages)} pages ΓåÆ {len(text)} chars from 3 random sections")
             elif ext.lower() == '.docx':
                 from docx import Document
                 doc = Document(file_path)
@@ -154,21 +158,22 @@ async def generate_from_rubric(
             print(f"File extraction error in rubric gen: {e}")
 
     try:
-        result = generation_service.generate_from_rubric(
-            rubric_id, 
-            db, 
+        # Run in thread so it doesn't block FastAPI's event loop
+        result = await asyncio.to_thread(
+            generation_service.generate_from_rubric,
+            rubric_id, db,
             engine=engine,
             context_text=context_text,
             custom_prompt=custom_prompt,
             fresh=fresh
         )
-        
+        questions = result.get("questions", [])
         return {
-            "success": result["success"],
-            "questions_generated": result["questions_generated"],
-            "questions": result.get("questions", []),
-            "log":  result["log"],
-            "message": f"Successfully generated {result['questions_generated']} questions"
+            "success": True,
+            "questions_generated": len(questions),
+            "questions": questions,
+            "log": {"subject": "Generated", "total_questions": len(questions)},
+            "message": f"Successfully generated {len(questions)} questions"
         }
     except ValueError as e:
         return {"success": False, "error": str(e)}
@@ -211,7 +216,7 @@ async def generate_from_file(
             from PyPDF2 import PdfReader
             reader = PdfReader(file_path)
             text = extract_pdf_smart_chunks(reader, chunk_size=4000, num_chunks=3)
-            print(f"[File] Smart-sampled PDF: {len(reader.pages)} pages → {len(text)} chars from 3 random sections")
+            print(f"[File] Smart-sampled PDF: {len(reader.pages)} pages ΓåÆ {len(text)} chars from 3 random sections")
         elif ext.lower() == '.docx':
             from docx import Document
             doc = Document(file_path)
@@ -351,13 +356,27 @@ def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db))
                 status="approved"
             )
             db.add(new_q)
-            stored_questions_data.append({
-                "question_text": new_q.question_text,
-                "type": new_q.question_type,
-                "marks": q_data.get('marks', 5)
-            })
-            
         db.commit()
+
+        # 3.2 Handle Rejected Questions
+        if request.rejected_questions:
+            for q_data in request.rejected_questions:
+                if q_data.get('id'):
+                    db.query(Question).filter(Question.id == q_data['id']).update({"status": "rejected"})
+                else:
+                    new_rejected = Question(
+                        topic_id=topic.id,
+                        question_text=q_data.get('question_text') or q_data.get('question', ''),
+                        question_type=q_data.get('type') or q_data.get('question_type', 'MCQ'),
+                        options=q_data.get('options', []),
+                        correct_answer=str(q_data.get('correct_answer', '')),
+                        explanation=q_data.get('explanation', ''),
+                        bloom_level=q_data.get('bloom_level') or q_data.get('complexity', 'Apply'),
+                        course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes', {}),
+                        status="rejected"
+                    )
+                    db.add(new_rejected)
+            db.commit()
         
         # 4. Create History
         total_marks = sum(q.get('marks', 5) for q in request.questions)

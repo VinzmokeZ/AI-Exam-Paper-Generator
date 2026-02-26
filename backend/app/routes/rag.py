@@ -14,6 +14,8 @@ class KnowledgeBaseCreate(BaseModel):
     description: Optional[str] = None
     source_url: str
     source_type: str = "drive" # "drive", "upload"
+    color: Optional[str] = "#C5B3E6"
+    gradient: Optional[str] = "from-[#C5B3E6] to-[#9B86C5]"
 
 class KnowledgeBaseResponse(BaseModel):
     id: int
@@ -22,6 +24,10 @@ class KnowledgeBaseResponse(BaseModel):
     source_url: Optional[str]
     source_type: str
     is_processed: bool
+    status: str = "pending"
+    error_message: Optional[str] = None
+    color: Optional[str]
+    gradient: Optional[str]
     created_at: datetime
 
     class Config:
@@ -39,6 +45,8 @@ async def process_link(
         description=kb_data.description,
         source_url=kb_data.source_url,
         source_type=kb_data.source_type,
+        color=kb_data.color,
+        gradient=kb_data.gradient,
         is_processed=False
     )
     db.add(db_kb)
@@ -63,6 +71,25 @@ async def delete_document(kb_id: int, db: Session = Depends(get_db)):
     db.delete(db_kb)
     db.commit()
     return {"message": "Document deleted successfully"}
+
+@router.put("/documents/{kb_id}", response_model=KnowledgeBaseResponse)
+async def update_document(
+    kb_id: int,
+    kb_data: KnowledgeBaseCreate,
+    db: Session = Depends(get_db)
+):
+    db_kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == kb_id).first()
+    if not db_kb:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    db_kb.title = kb_data.title
+    db_kb.source_url = kb_data.source_url
+    db_kb.color = kb_data.color
+    db_kb.gradient = kb_data.gradient
+    
+    db.commit()
+    db.refresh(db_kb)
+    return db_kb
 
 async def process_kb_background(kb_id: int):
     """Background task to download, chunk, and embed."""

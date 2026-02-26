@@ -11,9 +11,11 @@ echo ============================================================
 
 :: 1. Clean Build
 echo [PROGRESS] Pre-build Cleanup (Anti-Conflict)...
-:: System Purge: Kill any hung node processes that could block the build
+:: System Purge: Kill any hung node processes and clear stale build folders
 taskkill /F /IM node.exe /T >nul 2>&1
-if %ERRORLEVEL% EQU 0 (echo [FIX] Purged hung node processes...)
+if exist build rmdir /s /q build
+if exist dist rmdir /s /q dist
+if %ERRORLEVEL% EQU 0 (echo [FIX] Purged hung node processes and stale builds...)
 
 echo [PROGRESS] Building optimized web assets...
 call npm run build || (echo [ERROR] Web Build Failed! && pause && exit /b 1)

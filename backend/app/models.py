@@ -83,6 +83,10 @@ class KnowledgeBase(Base):
     source_url = Column(String(500), nullable=True) # Google Drive Link or File Path
     source_type = Column(String(50)) # "drive", "upload", "local"
     is_processed = Column(Boolean, default=False)
+    status = Column(String(50), default="pending") # pending, completed, failed
+    error_message = Column(String(500), nullable=True)
+    color = Column(String(50), default="#C5B3E6")
+    gradient = Column(String(255), default="from-[#C5B3E6] to-[#9B86C5]")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     chunks = relationship("KnowledgeChunk", back_populates="kb", cascade="all, delete-orphan")
@@ -167,7 +171,7 @@ class Rubric(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255))
-    subject_id = Column(Integer, ForeignKey("subjects.id"))
+    kb_id = Column(Integer, ForeignKey("knowledge_bases.id"))
     exam_type = Column(String(50))  # Final, Midterm, Quiz, Assignment
     duration_minutes = Column(Integer)
     total_marks = Column(Integer)
@@ -175,7 +179,7 @@ class Rubric(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    subject = relationship("Subject")
+    kb = relationship("KnowledgeBase")
     question_distributions = relationship("RubricQuestionDistribution", back_populates="rubric", cascade="all, delete-orphan")
     lo_distributions = relationship("RubricLODistribution", back_populates="rubric", cascade="all, delete-orphan")
     questions = relationship("Question", back_populates="rubric")

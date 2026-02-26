@@ -39,7 +39,8 @@ if (Test-Path $EnvPath) {
 
 if ($USE_MYSQL) {
     Write-Host "Mode: Standard (MySQL)" -ForegroundColor $CLR_INFO
-} else {
+}
+else {
     Write-Host "Mode: Lite (SQLite - Faster & Reliable)" -ForegroundColor $CLR_SUCCESS
 }
 Write-Host "`n"
@@ -68,7 +69,8 @@ if (Test-Path $ChromaPath) {
         # Force delete to fix the "KeyError: _type" metadata corruption from version mismatches
         Remove-Item -Path $ChromaPath -Recurse -Force -ErrorAction SilentlyContinue
         Write-Host "  * Knowledge Base reset (Self-Healed)" -ForegroundColor $CLR_SUCCESS
-    } catch {
+    }
+    catch {
         Write-Host "  * WARNING: Could not reset Knowledge Base automatically." -ForegroundColor $CLR_WARN
     }
 }
@@ -201,14 +203,16 @@ if ($USE_MYSQL) {
             exit 1
         }
     }
-} else {
+}
+else {
     Write-Host "  * Lite Mode active: Skipping MySQL/XAMPP setup" -ForegroundColor $CLR_GRAY
     Write-Host "  * Initializing SQLite database..." -ForegroundColor $CLR_GRAY
     Set-Location "$ProjectRoot\backend"
     python -c "from app.database import init_db; init_db()"
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  * SQLite database ready" -ForegroundColor $CLR_SUCCESS
-    } else {
+    }
+    else {
         Write-Host "  * SQLite initialization failed, but backend will try on launch" -ForegroundColor $CLR_WARN
     }
 }
@@ -232,14 +236,16 @@ if (Test-Path "$ProjectRoot\knowledge_base") {
     $docCount = (Get-ChildItem "$ProjectRoot\knowledge_base" -Recurse -File | Measure-Object).Count
     Write-Host "  * Found $docCount documents in knowledge_base" -ForegroundColor $CLR_GRAY
     
-    if (Test-Path "$ProjectRoot\sync_external_knowledge.py") {
-        Write-Host "  * Syncing knowledge base..." -ForegroundColor $CLR_GRAY
-        python sync_external_knowledge.py
-        Write-Host "  * Knowledge base indexed" -ForegroundColor $CLR_SUCCESS
-    }
-    else {
-        Write-Host "  * Auto-sync not available" -ForegroundColor $CLR_GRAY
-    }
+    
+    # if (Test-Path "$ProjectRoot\sync_external_knowledge.py") {
+    #     Write-Host "  * Syncing knowledge base..." -ForegroundColor $CLR_GRAY
+    #     python sync_external_knowledge.py
+    #     Write-Host "  * Knowledge base indexed" -ForegroundColor $CLR_SUCCESS
+    # }
+    # else {
+    #     Write-Host "  * Auto-sync not available" -ForegroundColor $CLR_GRAY
+    # }
+    Write-Host "  * Knowledge base sync skipped (Context Library Active)" -ForegroundColor $CLR_GRAY
 }
 else {
     Write-Host "  * No knowledge_base folder (optional)" -ForegroundColor $CLR_GRAY

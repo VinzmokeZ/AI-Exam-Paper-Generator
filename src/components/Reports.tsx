@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import {
@@ -101,17 +101,11 @@ export function Reports() {
   const bloomsData = (reportData?.blooms || []).map((b: any) => ({
     ...b,
     shortName: BLOOMS_META[b.level]?.shortName || b.level.substring(0, 4),
-    color: BLOOMS_META[b.level]?.color || '#8B9E9E'
+    color: BLOOMS_META[b.level]?.color || '#8B9E9E',
+    percentage: b.percent
   }));
 
-  const syllabusTopics = [
-    { name: 'Introduction to Algorithms', questions: 120, percentage: 95, color: '#50FA7B' },
-    { name: 'Sorting & Searching', questions: 98, percentage: 88, color: '#50FA7B' },
-    { name: 'Data Structures', questions: 85, percentage: 75, color: '#FFB86C' },
-    { name: 'Graph Algorithms', questions: 45, percentage: 62, color: '#FFB86C' },
-    { name: 'Dynamic Programming', questions: 32, percentage: 45, color: '#FF6AC1', alert: true },
-    { name: 'Hashing', questions: 70, percentage: 80, color: '#50FA7B' },
-  ];
+  const syllabusTopics = reportData?.syllabus || [];
 
   const maxCount = reportData?.blooms ? Math.max(...reportData.blooms.map((d: any) => d.count)) : 0;
 
@@ -430,7 +424,7 @@ export function Reports() {
                                 {paper.topic_name || paper.name || `Exam ${paper.id}`}
                               </h3>
                               <p className="text-[10px] text-[#0A1F1F] opacity-60 font-bold uppercase truncate" title={paper.subject_name || paper.subject || 'Subject'}>
-                                {paper.subject_name || paper.subject || 'Subject'} • {paper.questions_count || paper.question_count || paper.qs || 0} QS • {paper.marks || paper.total_marks || 0} MARKS
+                                {paper.subject_name || paper.subject || 'Subject'} ΓÇó {paper.questions_count || paper.question_count || paper.qs || 0} QS ΓÇó {paper.marks || paper.total_marks || 0} MARKS
                               </p>
                               <p className="text-[9px] text-[#0A1F1F] opacity-40 font-medium truncate">
                                 Generated on {paper.created_at ? new Date(paper.created_at).toLocaleDateString() : (paper.date || 'Unknown Date')}
@@ -519,7 +513,7 @@ export function Reports() {
                   <div className="bg-white/40 backdrop-blur-sm rounded-2xl p-4 border-3 border-white/40 mb-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-bold text-[#0A1F1F]">Overall LO Coverage</span>
-                      <span className="text-2xl font-bold text-[#0A1F1F]">88%</span>
+                      <span className="text-2xl font-bold text-[#0A1F1F]">{reportData?.overview?.loCoverage || 0}%</span>
                     </div>
                   </div>
 

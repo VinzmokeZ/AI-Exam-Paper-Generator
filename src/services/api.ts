@@ -202,6 +202,20 @@ export interface Topic {
     question_count?: number;
 }
 
+export interface KnowledgeBase {
+    id: number;
+    title: string;
+    description?: string;
+    source_url: string;
+    source_type: string;
+    is_processed: boolean;
+    status: 'pending' | 'completed' | 'failed';
+    error_message?: string;
+    color?: string;
+    gradient?: string;
+    created_at: string;
+}
+
 export const subjectService = {
     getAll: async (): Promise<Subject[]> => {
         try {
@@ -439,12 +453,13 @@ export const generationService = {
         });
         return response.data;
     },
-    bulkSave: async (subject: string, topic: string, questions: any[], duration: number = 60) => {
+    bulkSave: async (subject: string, topic: string, questions: any[], duration: number = 60, rejectedQuestions: any[] = []) => {
         const payload = {
             subject_name: subject,
             topic_name: topic,
             questions: questions,
-            duration: duration
+            duration: duration,
+            rejected_questions: rejectedQuestions
         };
         const response = await api.post('/generate/bulk-save', payload);
         return response.data;
@@ -553,5 +568,23 @@ export const achievementService = {
     getAll: async () => {
         const response = await api.get('/achievements/');
         return response.data;
+    }
+};
+
+export const knowledgeBaseService = {
+    getAll: async (): Promise<KnowledgeBase[]> => {
+        const response = await api.get('/rag/documents');
+        return response.data;
+    },
+    create: async (data: any): Promise<KnowledgeBase> => {
+        const response = await api.post('/rag/process-link', data);
+        return response.data;
+    },
+    update: async (id: number, data: any): Promise<KnowledgeBase> => {
+        const response = await api.put(`/rag/documents/${id}`, data);
+        return response.data;
+    },
+    delete: async (id: number): Promise<void> => {
+        await api.delete(`/rag/documents/${id}`);
     }
 };

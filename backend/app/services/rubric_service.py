@@ -126,7 +126,7 @@ def duplicate_rubric_logic(original: Rubric, db: Session) -> Rubric:
     # Create new rubric
     new_rubric = Rubric(
         name=f"{original.name} (Copy)",
-        subject_id=original.subject_id,
+        kb_id=original.kb_id,
         exam_type=original.exam_type,
         duration_minutes=original.duration_minutes,
         total_marks=original.total_marks,

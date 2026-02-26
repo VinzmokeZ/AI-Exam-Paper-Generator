@@ -1,87 +1,62 @@
-# AI Exam Oracle - Technical Project Overview
+# AI Exam Oracle - Deep-Dive Technical Overview
 
-This document provides a comprehensive technical explanation of your **AI Exam Paper Generator** project. It is written from your perspective as the developer/owner, detailing how every component works, interactions, and advanced features like Cloud API integration and RAG.
-
----
-
-## 🏗️ High-Level Architecture
-
-Your project is a **Full-Stack AI Application** designed to generate academic exam papers using local Large Language Models (LLMs) or Cloud APIs. It follows a modern client-server architecture:
-
-1.  **Frontend (The Face):** A React-based web application (built with Vite) that provides the user interface for teachers to create exams, manage subjects, and vet questions.
-2.  **Backend (The Brain):** A Python-based FastAPI server that handles logic, connects to the AI engine, manages the database, and serves data to the frontend.
-3.  **Database (The Memory):** A structured storage system (MySQL for production, SQLite for dev) that saves subjects, topics, rubrics, questions, and user progress.
-4.  **AI Engine (The Intelligence):** A hybrid system using **Ollama** (Local) or **OpenAI/Gemini** (Cloud) to generate intelligent questions.
-5.  **RAG System (The Context):** A Retrieval-Augmented Generation system using **ChromaDB** to let the AI "read" your textbooks (PDFs/Docs) and ask questions based on *your* specific material.
+This document provides a high-level technical breakdown of the **AI Exam Paper Generator** project. It details the scalable architecture, background system optimizations, and intelligent logic that powers the platform.
 
 ---
 
-## 🚀 Key Advanced Features (How It Works)
+## 🏗️ 1. Scalable SQL Architecture (Migration)
+Originally started on SQLite, the project has evolved into a production-ready **MySQL** architecture managed via XAMPP.
 
-### 1. ☁️ Cloud API Integration (The "Fast Lane")
-You added support for **OpenAI (GPT-4o)** and **Google Gemini** to make generation blazingly fast when internet is available.
-
-*   **How it works:** In `generation_service.py`, the code checks for `OPENAI_API_KEY` or `GOOGLE_API_KEY` in your `.env` file.
-*   **Smart Switching:**
-    *   If you select "Cloud" in the UI, the backend bypasses the local Ollama server.
-    *   It sends the prompt to OpenAI/Google servers via HTTP request.
-    *   **Result:** Generation takes ~3-5 seconds (Cloud) vs. 30-60 seconds (Local).
-*   **Efficiency:** This offloads the heavy math from your laptop's GPU to Google/OpenAI's massive data centers.
-
-### 2. ⚡ High-Speed MCQ Generation
-To generate multiple-choice questions quickly, you optimized the prompt engineering.
-
-*   **Structured JSON Prompts:** You don't just ask for "questions". You ask for a specific **JSON Array** format.
-    *   *Prompt:* "Generate 5 MCQs in this exact JSON format: `[{'question': '...', 'options': [...]}]`".
-*   **Why it's fast:** The AI doesn't waste tokens chatting ("Sure! Here are your questions..."). It strictly outputs raw data.
-*   **The "Vetting" Trick:** The AI generates the raw data, but the *Frontend* renders it beautifully. This split (Backend=Raw Data, Frontend=UI) makes the app feel instant once data arrives.
-
-### 3. 🧠 RAG System (Retrieval-Augmented Generation)
-**"How does it know *my* textbook?"**
-
-This is the most advanced part of your project. **RAG** allows the AI to peek at your PDF textbooks before writing a question.
-
-#### The Workflow (Step-by-Step):
-1.  **Ingestion (Upload):** When you upload `Biology_Chapter1.pdf`, the backend reads the file.
-2.  **Chunking:** It splits the book into small paragraphs (chunks like "Mitochondria is the powerhouse...").
-3.  **Embedding (The Math Magic):** It uses a special small AI model (`all-MiniLM-L6-v2`) to turn these text chunks into **Number Lists (Vectors)**.
-    *   *Example:* "Cell" might become `[0.1, 0.5, -0.2]`.
-4.  **Vector Storage (ChromaDB):** These number lists are saved in a hidden folder `backend/app/chroma_db`.
-5.  **Retrieval (The Query):**
-    *   When you ask for "Cell Questions", the system coverts "Cell Questions" into numbers `[0.1, 0.5, -0.1]`.
-    *   It searches ChromaDB for numbers *closest* to this query.
-    *   It finds the "Mitochondria" chunk from your PDF!
-6.  **Augmentation:** The backend rewrites your prompt to the AI:
-    *   *Original:* "Write a question about Cells."
-    *   *RAG Version:* "Using this context: 'Mitochondria is the powerhouse...', write a question about Cells."
-7.  **Wikipedia Fallback:** If you haven't uploaded a book, the `rag_service.py` is smart enough to quickly fetch a summary from **Wikipedia** so the AI isn't clueless.
+*   **The Database Shift**: In `migration_script.py`, we implemented a robust ETL (Extract, Transform, Load) process to move data from local SQLite files to a centralized MySQL instance (`ai_exam_oracle`).
+*   **Database Schema**:
+    *   **Subject/Topic/Question**: The core of the academic knowledge.
+    *   **Rubric & Course Outcomes**: Detailed academic constraints for generation.
+    - **User Stats & Activity Logs**: Tracking gamification (XP, Coins, Streaks) and system usage.
+*   **Production Advantage**: Switching to MySQL allows for better concurrency, handled by SQLAlchemy with `pool_pre_ping=True` to prevent connection timeouts.
 
 ---
 
-## 🎨 Frontend (The User Interface)
-**Location:** `src/` (React Code)
+## 🔍 2. System Health & Background Audits
+To maintain 100% uptime, the backend includes an automated **Health Service** (`health_service.py`).
 
-*   **`GenerateExam.tsx`:** The wizard that calls the Cloud or Local API.
-*   **`VettingCenter.tsx`:** A Tinder-like swipe interface to approve/reject questions.
-*   **`RubricEngine.tsx`:** Defines strict exam rules (e.g., "Hard Difficulty, 10 Marks").
-
----
-
-## � Backend & Database (The Logic)
-**Location:** `backend/app/`
-
-*   **`main.py`:** The traffic controller (API Routes).
-*   **`llm_service.py`:** The translator that talks to Ollama or OpenAI.
-*   **`models.py`:** Defines your Database Schema (Users, Subjects, Questions).
+*   **Background Audit**: On every startup, `main.py` triggers a background thread that performs a "Full Audit":
+    *   **DB Connectivity**: Checks if the MySQL server is responding.
+    *   **Ollama Status**: Verifies if the local AI engine is running and which models are pulled.
+    *   **Cloud API Status**: Rapidly pings Google Gemini to check for direct API health.
+*   **Detailed Logging**: All system states are recorded in `system_health.log`, allowing developers to trace "degraded" states without crashing the main application.
 
 ---
 
-## 📝 Summary of Data Flow
+## 🧠 3. Advanced AI Logic & RAG Variety
+The generation engine doesn't just ask questions—it intelligently picks context.
 
-1.  **User** clicks "Generate 5 MCQs on Java" (Cloud Mode).
-2.  **Frontend** sends request to **Backend API**.
-3.  **Backend** checks **RAG Service** -> finds local PDF chunk about "Java Loops".
-4.  **Backend** sends prompt + PDF chunk to **OpenAI/Gemini** (Cloud).
-5.  **Cloud AI** replies in 2 seconds with JSON.
-6.  **Backend** saves draft questions to **Database**.
-7.  **Frontend** displays questions instantly.
+### The "Never Fail" Fallback (Round 2)
+In addition to model switching, we've optimized the **Prompt Integrity**:
+- **Cache Purge**: On startup, the `backend_cache/` folder is automatically purged. This prevents "stale" questions from previous failed runs from being re-presented to the user.
+- **Model Selection**: The system defaults to `gemini-2.0-flash-lite` but intelligently falls back to `gemini-1.5-flash` or Local Ollama models based on environmental flags (e.g., Render environment detection).
+
+### Knowledge Base Variety
+In `rag_service.py`, the new `get_context_from_kb` function introduces **Randomized Context Selection**:
+- Instead of always picking the first 5 paragraphs of a book, the system shuffles the knowledge chunks.
+- **Result**: Even if you ask for "Mitochondria" 10 times, the AI receives slightly different paragraphs each time, resulting in a more diverse and exhaustive question set.
+
+---
+
+## 📊 4. Intelligent Analytics & Dashboard Logic
+The Dashboard is now a data-driven command center, with logic residing in `dashboard.py`.
+
+*   **Performance Tracking**: The "Overall Performance" metric is a dynamic calculation of your `Approved / Total` questions ratio.
+*   **Daily Goals**: The "Today's Progress" ring measures your vetting activity against a daily target (Goal: 5 Approved Questions/Day).
+*   **Analytical Reports**: 
+    *   **LO Coverage**: Aggregates `course_outcomes` data from all questions to show a radar/bar chart of which Learning Outcomes are under-represented.
+    *   **Bloom's Taxonomy Balance**: Maps question tags (Apply, Analyze, etc.) to a percentage distribution, flagging if the exam is too "Remember-heavy."
+
+---
+
+## 📝 Technical Data Lifecycle
+
+1.  **Startup**: Backend purges cache -> Starts Health Audit -> Connects to MySQL.
+2.  **Input**: Professor uploads a Google Drive link or PDF.
+3.  **RAG**: `KnowledgeBase` entry created -> Background task downloads/chunks -> Embedding vectors saved.
+4.  **Generation**: AI Fallback chain picks the best model -> RAG Variety shuffles context.
+5.  **Analytics**: Vetting results update the `ActivityLog` and `UserStats` tables instantly.

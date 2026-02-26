@@ -1,2 +1,54 @@
+# Dependencies
+node_modules/
 venv/
-temp_apk/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+
+# Build and Output
+dist/
+build/
+*.exe
+*.apk
+apk_file_list.txt
+apk_file_list_utf8.txt
+
+# Databases and Cache
+*.db
+*.sqlite3
+backend_cache/
+chroma_db/
+backend/backend_cache/
+.chroma/
+
+# Environment and Secrets
+.env
+*.local
+.vscode/
+.idea/
+.firebase/
+.firebaserc
+
+# Logs and Temps
+*.log
+logs/
+temp_*/
+temp_*
+generation_errors.log
+verify_output.txt
+error.log
+
+# Project Specific
+AI Exam Paper Generator Figma.zip
+Internship Project Reference .pdf
+test_upload.txt
+Prompt.txt
+COMMANDS.txt
+tunnel_url.txt
+models_list.txt
+temp_devices.txt
+build_error.txt
+_legacy/
+FigmaImport/
+PRODUCTION_PACKAGE/

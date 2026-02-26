@@ -103,8 +103,10 @@ def startup_event():
             _time.sleep(1)  # Extra buffer before RAG
             from .services.rag_service import get_rag_service
             print("[SERVER] Initializing RAG (Background Standby Mode)...")
-            service = get_rag_service()
-            service.auto_index_kb()
+            # service = get_rag_service()
+            # service.auto_index_kb()
+            print("[SERVER] Initializing RAG service...")
+            get_rag_service() # Just initialize, don't auto-index
         except Exception as e:
             print(f"[SERVER] ❌ RAG Initialization Failed in background: {e}")
             print("[SERVER] Background indexing will be skipped. Core API is still functional.")

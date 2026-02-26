@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Target, CheckCircle2, Circle, Plus, Trash2, Sparkles } from 'lucide-react';
@@ -11,20 +11,28 @@ interface Goal {
 }
 
 export function TodaysGoals() {
-  const [goals, setGoals] = useState<Goal[]>([
-    { id: 1, text: 'Generate 10 MCQ questions', completed: true, category: 'generate' },
-    { id: 2, text: 'Vet 5 pending questions', completed: true, category: 'vetting' },
-    { id: 3, text: 'Create new rubric for Math 101', completed: false, category: 'rubric' },
-    { id: 4, text: 'Review analytics report', completed: false, category: 'other' },
-    { id: 5, text: 'Update subject files', completed: false, category: 'other' },
-  ]);
+  const [goals, setGoals] = useState<Goal[]>(() => {
+    const saved = localStorage.getItem('ai_exam_todays_goals');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return [
+      { id: 1, text: 'Generate 10 MCQ questions', completed: false, category: 'generate' },
+      { id: 2, text: 'Vet 5 pending questions', completed: false, category: 'vetting' },
+      { id: 3, text: 'Create new rubric for Math 101', completed: false, category: 'rubric' },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('ai_exam_todays_goals', JSON.stringify(goals));
+  }, [goals]);
 
   const [newGoalText, setNewGoalText] = useState('');
   const [showAddGoal, setShowAddGoal] = useState(false);
 
   const completedCount = goals.filter(g => g.completed).length;
   const totalCount = goals.length;
-  const progressPercent = (completedCount / totalCount) * 100;
+  const progressPercent = totalCount === 0 ? 0 : (completedCount / totalCount) * 100;
 
   const toggleGoal = (id: number) => {
     setGoals(goals.map(g =>
@@ -130,8 +138,8 @@ export function TodaysGoals() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 + index * 0.05 }}
               className={`rounded-2xl p-4 border-3 ${goal.completed
-                  ? 'bg-[#0D3D3D] border-[#50FA7B]'
-                  : 'bg-[#0A1F1F] border-[#0D3D3D]'
+                ? 'bg-[#0D3D3D] border-[#50FA7B]'
+                : 'bg-[#0A1F1F] border-[#0D3D3D]'
                 }`}
             >
               <div className="flex items-center gap-3">

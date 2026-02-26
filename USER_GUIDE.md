@@ -1,39 +1,53 @@
-## 0. One-Click Launch (Automation)
-I have automated everything for you! 
-1. Just run **`REFRESH_AND_RUN.bat`**.
-2. It will automatically:
-   - Attempt to start **XAMPP** (Apache and MySQL).
-   - Start the **AI Engine** (Ollama).
-   - Reset and Sync your **MySQL Database** (so you can see it in phpMyAdmin).
-   - Launch your **Backend** and **Frontend**.
-   - Open your browser to the Dashboard.
+# AI Exam Oracle - Expert Operational Guide
 
-## 1. Checking Language Model (LLM)
-To verify if the AI is ready to generate questions:
-1. Open a terminal in the project folder.
-2. Run: `python check_llm.py`
-3. You should see `[SUCCESS] Language Model Response: YES`.
+This guide is for power users who want to dive deep into the advanced settings, analytics, and infrastructure of the platform.
 
-## 2. Uploading Folder or PDF for Training
-You can train the AI on your own materials:
-1. Navigate to **Subject Library** -> Select a Subject.
-2. Click the **Upload** icon (top right).
-3. Select your **PDF** or **Docx** files.
-4. The AI will process these and use them as context for future questions.
+---
 
-## 3. Testing New Features
-- **Exam History**: Click the `History` button on the Dashboard. You'll see all previously generated exams here.
-- **Leaderboard**: Click the `Leaders` button to see rankings.
-- **Gamification**: You now earn **Coins** for every exam generated. Leveling up gives you 50 bonus coins.
-- **PDF Export**: In Exam History, click the `PDF` button on any exam to export it.
+## 💾 1. Database Migration (Moving to MySQL)
+If you have been using the app in "Portable Mode" (SQLite) and want to move to the robust "Server Mode" (MySQL), follow these steps:
 
-## 4. Deployment
-Ready to go live?
-1. Run `DEPLOY_TO_WEB.bat`.
-2. This will build your app and help you upload it to Netlify or Firebase.
-3. Make sure to point your backend URL in `src/services/api.ts` to your production server address.
+1.  **Launch XAMPP**: Ensure Apache and MySQL are running in your XAMPP Control Panel.
+2.  **Open Terminal**: Navigate to the `backend/` directory.
+3.  **Run Migration**:
+    ```bash
+    python migration_script.py
+    ```
+4.  **Verify**: Open `http://localhost/phpmyadmin` and check for the `ai_exam_oracle` database.
+5.  **Enable MySQL**: Open `backend/.env` and set `USE_MYSQL=true`. Restart the app to reflect changes.
 
-## 5. UI Stability
-- All modals (like the AI Prompt box) are now constrained to **85% of the screen height**.
-- Scrollbars are added where needed to prevent elements from popping out of the phone frame.
-- All buttons are wired to their respective routes.
+---
+
+## 📈 2. Interpreting Advanced Analytics
+The **Reports & Analytics** tab provides academic insights into your question banks.
+
+### Bloom's Taxonomy Balance
+- **What to look for**: A healthy exam library should have a "Pyramid" shape (more Knowledge/Comprehension, fewer but high-impact Synthesis/Evaluation).
+- **Alert Flags**: If your chart shows 90% "Knowledge", the AI will warn you to "Increase Complexity" in the Prompt Box.
+
+### Learning Outcome (LO) Coverage
+- **The Target**: Every course has specific Learning Outcomes (LO1-LO5). 
+- **The Logic**: The system looks at the `course_outcomes` meta-tag on every approved question. If LO4 (Analyze) has 0 questions, you'll see a **Critical Alert**.
+- **Action**: Use the **Rubric Engine** to specifically request questions for the missing LO.
+
+---
+
+## 🔗 3. Advanced Knowledge Base Management
+Beyond simple PDF uploads, the system supports cloud-linked knowledge.
+
+### Google Drive Integration
+1.  **Preparation**: Upload your textbook to Google Drive.
+2.  **Sharing**: Set the file permissions to **"Anyone with the link"**.
+3.  **The Link**: Copy the link and paste it into the **RAG/Knowledge Base** section.
+4.  **The Process**: The backend will download the PDF, chunk it into 1500-character segments, and store them for Randomized Retrieval.
+
+### Randomized Context Variety (Power Tip)
+When generating questions from a large Knowledge Base, the system uses a **Variety Shuffle**. Even with the same prompt, the AI-curated context changes slightly every time you click "Generate". This prevents repetitive questions and ensures full textbook coverage over time.
+
+---
+
+## 🛠️ 4. System Health Checks
+If the app feels slow or generation fails:
+- **Check the Light**: If the header light is **Dim Gray**, the backend is offline.
+- **Check the Logs**: Open `backend/system_health.log` to see if the AI engine (Ollama) or the DB connection has failed.
+- **Cache Purge**: If you see weird results, simply restart the backend. The system automatically purges the `backend_cache/` folder on every startup to ensure data integrity.

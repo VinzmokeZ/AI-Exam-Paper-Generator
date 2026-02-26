@@ -36,4 +36,16 @@ def ensure_schema_sync(engine):
             except Exception as e:
                 print(f"[DB] ❌ Failed to add 'course_outcome': {e}")
 
+    # Check 'rubrics' table
+    if 'rubrics' in inspector.get_table_names():
+        rubric_columns = [c['name'] for c in inspector.get_columns('rubrics')]
+        if 'kb_id' not in rubric_columns:
+            print("[DB] 🔄 Column 'kb_id' missing in 'rubrics'. Patching...")
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE rubrics ADD COLUMN kb_id INTEGER"))
+                print("[DB] ✅ Successfully added 'kb_id' column to 'rubrics'.")
+            except Exception as e:
+                print(f"[DB] ❌ Failed to add 'kb_id' to 'rubrics': {e}")
+                
     # Add other critical check here if needed

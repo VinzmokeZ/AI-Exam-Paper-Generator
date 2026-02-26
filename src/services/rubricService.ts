@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, AI_TIMEOUT } from './api';
 
 export interface QuestionDistribution {
     question_type: 'MCQ' | 'Short' | 'Essay' | 'Case Study';
@@ -13,7 +13,7 @@ export interface LODistribution {
 
 export interface RubricCreate {
     name: string;
-    subject_id: number;
+    kb_id: number | null;
     exam_type: 'Final' | 'Midterm' | 'Quiz' | 'Assignment';
     duration_minutes: number;
     ai_instructions?: string;
@@ -23,7 +23,7 @@ export interface RubricCreate {
 
 export interface RubricResponse extends RubricCreate {
     id: number;
-    subject_name?: string;
+    kb_name?: string;
     total_marks: number;
 }
 
@@ -73,7 +73,10 @@ class RubricService {
         if (file) formData.append('file', file);
         if (instructions) formData.append('custom_prompt', instructions);
 
-        const response = await api.post(`/generate/rubric/${rubricId}`, formData);
+        const response = await api.post(`/generate/rubric/${rubricId}`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: AI_TIMEOUT
+        });
 
         if (!response.data.success) {
             throw new Error(response.data.error || 'Generation failed');

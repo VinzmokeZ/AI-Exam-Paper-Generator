@@ -11,13 +11,24 @@ interface ExamStructurePreviewProps {
 
 export function ExamStructurePreview({ questions, subjectName, onBack, rubricName }: ExamStructurePreviewProps) {
 
-    // Group questions by type
-    const groupedQuestions = {
-        'PART A: MULTIPLE CHOICE QUESTIONS': questions.filter(q => q.type === 'MCQ' || q.question_type === 'MCQ'),
-        'PART B: SHORT ANSWER QUESTIONS': questions.filter(q => q.type === 'Short' || q.question_type === 'Short'),
-        'PART C: ESSAY QUESTIONS': questions.filter(q => q.type === 'Essay' || q.question_type === 'Essay'),
-        'PART D: CASE STUDIES': questions.filter(q => q.type === 'Case Study' || q.question_type === 'Case Study'),
+    // Helper for robust type matching
+    const matchesType = (q: any, ...types: string[]) => {
+        const qType = (q.type || q.question_type || '').toString().toUpperCase();
+        return types.some(t => qType === t.toUpperCase() || qType.includes(t.toUpperCase()));
     };
+
+    // Group questions by type with robust matching
+    const groupedQuestions = {
+        'PART A: MULTIPLE CHOICE QUESTIONS': questions.filter(q => matchesType(q, 'MCQ', 'Multiple Choice')),
+        'PART B: SHORT ANSWER QUESTIONS': questions.filter(q => matchesType(q, 'Short', 'Brief')),
+        'PART C: ESSAY QUESTIONS': questions.filter(q => matchesType(q, 'Essay', 'Long')),
+        'PART D: CASE STUDIES': questions.filter(q => matchesType(q, 'Case', 'Scenario')),
+    };
+
+    // Find any questions that didn't fit into the above categories
+    const otherQuestions = questions.filter(q =>
+        !Object.values(groupedQuestions).flat().some(groupedQ => (groupedQ.id && q.id && groupedQ.id === q.id) || groupedQ === q)
+    );
 
     const handleDownload = () => {
         // Physical storage download logic (Save as Text/Doc for maximum compatibility)
@@ -135,12 +146,81 @@ End of Exam Paper
                                                 ))}
                                             </div>
                                         )}
+
+                                        {/* Course Outcomes Display */}
+                                        {(q.courseOutcomes || q.course_outcomes) && typeof (q.courseOutcomes || q.course_outcomes) === 'object' && Object.keys(q.courseOutcomes || q.course_outcomes).length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[#F5F1ED] print:border-gray-200">
+                                                {Object.entries((q.courseOutcomes || q.course_outcomes) as Record<string, number>).map(([co, lvl]) => {
+                                                    if (!lvl) return null;
+                                                    return (
+                                                        <div key={co} className="px-2 py-0.5 rounded border border-[#E5DED6] bg-[#F5F1ED] text-[9px] font-bold text-[#8B9E9E] uppercase print:border-gray-300 print:bg-gray-50 print:text-gray-500">
+                                                            {co}: <span className="text-[#0A1F1F] print:text-black">Lvl {lvl}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
                         </div>
                     );
                 })}
+
+                {/* Additional Questions Fallback */}
+                {otherQuestions.length > 0 && (
+                    <div className="break-inside-avoid">
+                        <h3 className="text-xs font-black text-[#8B9E9E] uppercase tracking-widest mb-4 ml-1 print:text-black print:text-sm print:mb-2">
+                            PART E: ADDITIONAL QUESTIONS
+                        </h3>
+                        <div className="space-y-4 print:space-y-6">
+                            {otherQuestions.map((q, index) => (
+                                <div
+                                    key={q.id || `other-${index}`}
+                                    className="bg-white rounded-2xl p-5 shadow-sm border border-[#E5DED6] print:shadow-none print:border-0 print:p-0 print:mb-4 break-inside-avoid"
+                                >
+                                    <div className="flex items-start justify-between mb-3 print:mb-1">
+                                        <span className="text-[10px] font-bold text-[#8B9E9E] uppercase print:text-black print:text-xs">
+                                            Question {index + 1} ({q.type || q.question_type || 'General'})
+                                        </span>
+                                        <div className="px-2 py-1 bg-[#F5F1ED] rounded-lg text-[10px] font-bold text-[#0A1F1F] print:bg-transparent print:p-0 print:text-black">
+                                            {q.marks || 1} Marks
+                                        </div>
+                                    </div>
+
+                                    <p className="text-sm font-bold text-[#0A1F1F] mb-4 leading-relaxed print:text-black print:text-base">
+                                        {q.question_text || q.question}
+                                    </p>
+
+                                    {/* Options Fallback */}
+                                    {q.options?.length > 0 && (
+                                        <div className="space-y-2 mb-4 pl-2 border-l-2 border-[#E5DED6] print:border-l-4 print:border-gray-300">
+                                            {q.options.map((opt: string, i: number) => (
+                                                <div key={i} className="text-xs text-[#5C6B6B] print:text-black print:text-sm">
+                                                    <span className="font-bold mr-2">{String.fromCharCode(65 + i)}.</span> {opt}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Course Outcomes Display (Other Questions) */}
+                                    {(q.courseOutcomes || q.course_outcomes) && typeof (q.courseOutcomes || q.course_outcomes) === 'object' && Object.keys(q.courseOutcomes || q.course_outcomes).length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[#F5F1ED] print:border-gray-200">
+                                            {Object.entries((q.courseOutcomes || q.course_outcomes) as Record<string, number>).map(([co, lvl]) => {
+                                                if (!lvl) return null;
+                                                return (
+                                                    <div key={co} className="px-2 py-0.5 rounded border border-[#E5DED6] bg-[#F5F1ED] text-[9px] font-bold text-[#8B9E9E] uppercase print:border-gray-300 print:bg-gray-50 print:text-gray-500">
+                                                        {co}: <span className="text-[#0A1F1F] print:text-black">Lvl {lvl}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Floating Download Button */}

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel, Field
 from ..database import get_db
-from ..models import Rubric, RubricQuestionDistribution, RubricLODistribution, Subject
+from ..models import Rubric, RubricQuestionDistribution, RubricLODistribution, KnowledgeBase
 from ..services.rubric_service import validate_rubric, duplicate_rubric_logic
 
 router = APIRouter(prefix="/api/rubrics", tags=["rubrics"])
@@ -23,7 +23,7 @@ class LODistributionCreate(BaseModel):
 
 class RubricCreate(BaseModel):
     name: str
-    subject_id: int
+    kb_id: int
     exam_type: str = Field(..., description="Final, Midterm, Quiz, Assignment")
     duration_minutes: int = Field(..., ge=1)
     ai_instructions: str | None = None
@@ -33,8 +33,8 @@ class RubricCreate(BaseModel):
 class RubricResponse(BaseModel):
     id: int
     name: str
-    subject_id: int
-    subject_name: str | None = None
+    kb_id: int | None = None
+    kb_name: str | None = None
     exam_type: str
     duration_minutes: int
     total_marks: int
@@ -55,10 +55,10 @@ def create_rubric(rubric: RubricCreate, db: Session = Depends(get_db)):
     if validation_error:
         raise HTTPException(status_code=400, detail=validation_error)
     
-    # Check if subject exists
-    subject = db.query(Subject).filter(Subject.id == rubric.subject_id).first()
-    if not subject:
-        raise HTTPException(status_code=404, detail="Subject not found")
+    # Check if knowledge base exists
+    kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == rubric.kb_id).first()
+    if not kb:
+        raise HTTPException(status_code=404, detail="Knowledge Base not found")
     
     # Calculate total marks
     total_marks = sum(
@@ -68,7 +68,7 @@ def create_rubric(rubric: RubricCreate, db: Session = Depends(get_db)):
     # Create rubric
     db_rubric = Rubric(
         name=rubric.name,
-        subject_id=rubric.subject_id,
+        kb_id=rubric.kb_id,
         exam_type=rubric.exam_type,
         duration_minutes=rubric.duration_minutes,
         total_marks=total_marks,
@@ -100,7 +100,7 @@ def create_rubric(rubric: RubricCreate, db: Session = Depends(get_db)):
     db.refresh(db_rubric)
     
     # Build response
-    return build_rubric_response(db_rubric, subject.name, db)
+    return build_rubric_response(db_rubric, kb.title, db)
 
 @router.get("/", response_model=List[RubricResponse])
 def list_rubrics(db: Session = Depends(get_db)):
@@ -111,7 +111,7 @@ def list_rubrics(db: Session = Depends(get_db)):
     return [
         build_rubric_response(
             rubric,
-            db.query(Subject).filter(Subject.id == rubric.subject_id).first().name,
+            db.query(KnowledgeBase).filter(KnowledgeBase.id == rubric.kb_id).first().title if db.query(KnowledgeBase).filter(KnowledgeBase.id == rubric.kb_id).first() else "Unknown",
             db
         )
         for rubric in rubrics
@@ -126,8 +126,8 @@ def get_rubric(rubric_id: int, db: Session = Depends(get_db)):
     if not rubric:
         raise HTTPException(status_code=404, detail="Rubric not found")
     
-    subject = db.query(Subject).filter(Subject.id == rubric.subject_id).first()
-    return build_rubric_response(rubric, subject.name if subject else None, db)
+    kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == rubric.kb_id).first()
+    return build_rubric_response(rubric, kb.title if kb else None, db)
 
 @router.post("/{rubric_id}/duplicate", response_model=RubricResponse)
 def duplicate_rubric(rubric_id: int, db: Session = Depends(get_db)):
@@ -139,9 +139,9 @@ def duplicate_rubric(rubric_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Rubric not found")
     
     new_rubric = duplicate_rubric_logic(original, db)
-    subject = db.query(Subject).filter(Subject.id == new_rubric.subject_id).first()
+    kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == new_rubric.kb_id).first()
     
-    return build_rubric_response(new_rubric, subject.name if subject else None, db)
+    return build_rubric_response(new_rubric, kb.title if kb else None, db)
 
 @router.delete("/{rubric_id}")
 def delete_rubric(rubric_id: int, db: Session = Depends(get_db)):
@@ -178,7 +178,7 @@ def update_rubric(rubric_id: int, rubric: RubricCreate, db: Session = Depends(ge
     
     # Update rubric fields
     db_rubric.name = rubric.name
-    db_rubric.subject_id = rubric.subject_id
+    db_rubric.kb_id = rubric.kb_id
     db_rubric.exam_type = rubric.exam_type
     db_rubric.duration_minutes = rubric.duration_minutes
     db_rubric.total_marks = total_marks
@@ -213,10 +213,10 @@ def update_rubric(rubric_id: int, rubric: RubricCreate, db: Session = Depends(ge
     db.commit()
     db.refresh(db_rubric)
     
-    subject = db.query(Subject).filter(Subject.id == db_rubric.subject_id).first()
-    return build_rubric_response(db_rubric, subject.name if subject else None, db)
+    kb = db.query(KnowledgeBase).filter(KnowledgeBase.id == db_rubric.kb_id).first()
+    return build_rubric_response(db_rubric, kb.title if kb else None, db)
 
-def build_rubric_response(rubric: Rubric, subject_name: str | None, db: Session) -> dict:
+def build_rubric_response(rubric: Rubric, kb_name: str | None, db: Session) -> dict:
     """Helper to build rubric response with distributions"""
     question_dists = db.query(RubricQuestionDistribution).filter(
         RubricQuestionDistribution.rubric_id == rubric.id
@@ -229,8 +229,8 @@ def build_rubric_response(rubric: Rubric, subject_name: str | None, db: Session)
     return {
         "id": rubric.id,
         "name": rubric.name,
-        "subject_id": rubric.subject_id,
-        "subject_name": subject_name,
+        "kb_id": rubric.kb_id,
+        "kb_name": kb_name,
         "exam_type": rubric.exam_type,
         "duration_minutes": rubric.duration_minutes,
         "total_marks": rubric.total_marks,

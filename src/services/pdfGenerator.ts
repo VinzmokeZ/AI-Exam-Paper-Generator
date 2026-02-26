@@ -98,6 +98,30 @@ export const generateExamPDF = async (data: ExamPaperData) => {
             const textHeight = splitText.length * 5;
             yPos += 6 + textHeight + 4;
 
+            // Parse and Print Course Outcomes immediately below question text
+            let coString = '';
+            if ((q.courseOutcomes || q.course_outcomes) && typeof (q.courseOutcomes || q.course_outcomes) === 'object') {
+                const cos = (q.courseOutcomes || q.course_outcomes) as Record<string, number>;
+                const activeCOs = Object.entries(cos)
+                    .filter(([_, lvl]) => lvl)
+                    .map(([co, lvl]) => `${co.toUpperCase()} (Lvl ${lvl})`);
+                if (activeCOs.length > 0) {
+                    coString = `[Course Outcomes: ${activeCOs.join(', ')}]`;
+                }
+            }
+
+            if (coString) {
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(120);
+                doc.text(coString, margin + 5, yPos);
+                // Reset font for following content
+                doc.setTextColor(0);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(11);
+                yPos += 6;
+            }
+
             // Option Parsing
             let parsedOptions: string[] = [];
             const rawOptions = q.options || (q as any).choices;
@@ -172,7 +196,7 @@ export const generateExamPDF = async (data: ExamPaperData) => {
 
         // Smart Answer Key Formatting
         const answerKeyBody = data.questions.map((q, i) => {
-            let answerDisplay = q.correct_answer || 'Check instructor guide';
+            let answerDisplay = q.correct_answer || q.explanation || 'Check instructor guide';
 
             const qType = (q.type || (q as any).question_type || '').toUpperCase();
 

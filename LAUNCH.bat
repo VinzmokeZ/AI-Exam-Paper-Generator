@@ -32,10 +32,15 @@ netsh advfirewall firewall add rule name="AI Exam Oracle Port 8000" dir=in actio
 echo [OK] Firewall rule applied.
 
 :: ============================================================
-:: STEP 2: KILL OLD BACKEND ON PORT 8000
+:: STEP 2: KILL OLD BACKEND ON PORT 8000 (double pass)
 :: ============================================================
 echo [2/6] Clearing port 8000...
-for /f "tokens=5" %%i in ('netstat -aon 2^>nul ^| findstr ":8000 "') do (
+for /f "tokens=5" %%i in ('netstat -aon 2^>nul ^| findstr ":8000"') do (
+    taskkill /F /PID %%i >nul 2>&1
+)
+timeout /t 2 >nul
+:: Second pass to catch any stragglers
+for /f "tokens=5" %%i in ('netstat -aon 2^>nul ^| findstr ":8000"') do (
     taskkill /F /PID %%i >nul 2>&1
 )
 timeout /t 1 >nul
@@ -59,7 +64,6 @@ echo  ----------------------------------------------------------
 :: ============================================================
 echo [4/6] Setting up USB Phone Link (ADB)...
 
-:: Try to find ADB — check PATH first, then Android Studio default location
 set "ADB_EXE="
 where adb >nul 2>&1
 if !ERRORLEVEL! EQU 0 (
@@ -68,8 +72,7 @@ if !ERRORLEVEL! EQU 0 (
     set "ADB_EXE=%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"
     echo [INFO] Found ADB at Android Studio SDK location.
 ) else (
-    echo [!!] ADB not found. Install Android SDK Platform Tools.
-    echo      OR open Android Studio once to install it automatically.
+    echo [!!] ADB not found. USB link skipped.
     set "USB_CONNECTED=NO"
     goto :adb_done
 )
@@ -82,10 +85,7 @@ if !ERRORLEVEL! EQU 0 (
     echo      Phone reaches backend at: http://localhost:8000
     set "USB_CONNECTED=YES"
 ) else (
-    echo [!!] Phone not found via USB. Check:
-    echo      1. USB cable plugged in?
-    echo      2. USB Debugging ON? (Settings - Developer Options)
-    echo      3. Set USB mode to File Transfer (not Charging only)
+    echo [!!] Phone not found via USB. Check cable and USB Debugging.
     set "USB_CONNECTED=NO"
 )
 del "%TEMP%\adb_check.txt" >nul 2>&1
@@ -98,34 +98,25 @@ echo.
 echo [5/6] System Status:
 echo  ----------------------------------------------------------
 echo   DB       : SQLite (always works, no setup needed)
-echo   Local AI : phi3:mini via Ollama (localhost:11434)
-echo   Cloud AI : OpenRouter Gemini 2.0 Flash
+echo   Cloud AI : Google Gemini 1.5 Flash (Direct API)
 echo   Phone    : !USB_CONNECTED!
 echo   Backend  : http://!WIFI_IP!:8000
 echo  ----------------------------------------------------------
-
-curl -s --max-time 2 http://localhost:11434/api/tags >nul 2>&1
-if !ERRORLEVEL! EQU 0 (
-    echo   Ollama   : RUNNING
-) else (
-    echo   Ollama   : OFF (start Ollama for local AI)
-)
 echo.
 
 :: ============================================================
-:: STEP 6: START BACKEND WITH LIVE REQUEST LOG
+:: STEP 6: START BACKEND
 :: ============================================================
 echo [6/6] Starting AI Engine...
+cd /d "%~dp0backend"
+call venv\Scripts\activate.bat
 pip install -r requirements.txt >nul 2>&1
+
 echo  ==========================================================
 echo    LIVE LOG  - All HTTP requests appear below
-echo    192.168.x.x:PORT - GET /api/health 200 OK
 echo    Press Ctrl+C to stop
 echo  ==========================================================
 echo.
-
-cd /d "%~dp0backend"
-call venv\Scripts\activate.bat
 
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info --access-log
 

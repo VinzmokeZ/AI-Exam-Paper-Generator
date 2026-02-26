@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AIPromptBox } from './AIPromptBox';
 import { Link } from 'react-router-dom';
-import { Search, Plus, ChevronRight, FileStack, ArrowLeft, Sparkles, X, Palette, Check, Loader2, Trash2, Filter, Wand2 } from 'lucide-react';
-import { subjectService, Subject, api, connectionLogs, generationService } from '../services/api';
+import { AIPromptBox } from './AIPromptBox';
+import { Search, Plus, ChevronRight, FileStack, ArrowLeft, Sparkles, X, Palette, Check, Loader2, Trash2, Filter, Wand2, Link as LinkIcon, Globe, FileText } from 'lucide-react';
+import { knowledgeBaseService, KnowledgeBase, api, connectionLogs, generationService } from '../services/api';
 import { Modal } from './Modal';
 import { toast } from 'sonner';
-import { DEFAULT_SUBJECTS } from '../constants/defaultData';
 import { useNavigate } from 'react-router-dom';
 
 const colorOptions = [
@@ -20,45 +19,30 @@ const colorOptions = [
 
 export function SubjectLibrary() {
   const navigate = useNavigate();
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [contexts, setContexts] = useState<KnowledgeBase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDebug, setShowDebug] = useState(false);
 
-  // Create Modal State
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newSubjectName, setNewSubjectName] = useState('');
-  const [newSubjectCode, setNewSubjectCode] = useState('');
-  const [newIntroduction, setNewIntroduction] = useState('');
+  // Unified Modal State (Create/Edit)
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
   const [selectedColor, setSelectedColor] = useState('#C5B3E6');
   const [selectedGradient, setSelectedGradient] = useState('from-[#C5B3E6] to-[#9B86C5]');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sortOption, setSortOption] = useState<'name' | 'code' | 'questions' | 'newest'>('name');
+  const [sortOption, setSortOption] = useState<'title' | 'status' | 'newest'>('title');
   const [showSortMenu, setShowSortMenu] = useState(false);
 
   // Generation Modal State
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [selectedSubjectForGen, setSelectedSubjectForGen] = useState<Subject | null>(null);
-  const [genFile, setGenFile] = useState<File | null>(null);
-  const [genPrompt, setGenPrompt] = useState('');
-  const [genCount, setGenCount] = useState(5);
-  const [genComplexity, setGenComplexity] = useState('Balanced');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [indexedFilesMap, setIndexedFilesMap] = useState<Record<string, string[]>>({});
+  const [selectedContextForGen, setSelectedContextForGen] = useState<KnowledgeBase | null>(null);
 
   useEffect(() => {
-    loadSubjects();
+    loadContexts();
     checkConnection();
-    // Load indexed files from local storage
-    const stored = localStorage.getItem('indexed_files_registry');
-    if (stored) {
-      try {
-        setIndexedFilesMap(JSON.parse(stored));
-      } catch (e) {
-        console.error("Failed to parse indexed files registry:", e);
-      }
-    }
   }, []);
 
   const [isBackendOnline, setIsBackendOnline] = useState(false);
@@ -82,138 +66,98 @@ export function SubjectLibrary() {
     }
   };
 
-  const loadSubjects = async () => {
+  const loadContexts = async () => {
     setIsLoading(true);
     try {
-      // The service now handles hybrid local/cloud logic and DEFAULT_SUBJECTS merging
-      const data = await subjectService.getAll();
-      setSubjects(data);
+      const data = await knowledgeBaseService.getAll();
+      setContexts(data);
     } catch (error) {
-      console.error("Failed to load subjects:", error);
-      toast.error("Error loading subjects");
+      console.error("Failed to load knowledge contexts:", error);
+      toast.error("Error loading contexts");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCreateSubject = async () => {
-    if (!newSubjectName.trim() || !newSubjectCode.trim()) {
-      toast.error("Name and Code are required");
+  const handleSubmitContext = async () => {
+    if (!title.trim() || !sourceUrl.trim()) {
+      toast.error("Title and URL are required");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const newSubject = await subjectService.create({
-        name: newSubjectName,
-        code: newSubjectCode,
-        introduction: newIntroduction || `Introduction to ${newSubjectName} `,
+      const payload = {
+        title,
+        description,
+        source_url: sourceUrl,
+        source_type: "drive",
         color: selectedColor,
         gradient: selectedGradient
-      });
+      };
 
-      setSubjects([...subjects, { ...newSubject, chapters: 0, questions: 0 }]);
-      toast.success("Subject created successfully!");
-      setShowCreateModal(false);
-      resetForm();
-    } catch (error) {
-      console.error("Failed to create subject:", error);
-      toast.error("Failed to create subject");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSaveToDB = async (subject: any) => {
-    setIsSubmitting(true);
-    try {
-      const { id, chapters, questions, ...payload } = subject;
-      await subjectService.create(payload);
-      toast.success(`${subject.name} saved to database!`);
-      loadSubjects();
-    } catch (error) {
-      toast.error("Failed to save subject to database");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteSubject = async (id: number | string, name: string) => {
-    if (!window.confirm(`Are you sure you want to delete "${name}" ? `)) return;
-
-    try {
-      await subjectService.delete(id);
-      toast.success("Subject deleted");
-      loadSubjects();
-    } catch (error) {
-      toast.error("Delete failed. Default subjects cannot be deleted until saved to database.");
-    }
-  };
-
-  const handleSmartGenerateSubmit = async () => {
-    if (!genFile || !selectedSubjectForGen) {
-      toast.error("Please upload a file first!");
-      return;
-    }
-
-    setIsGenerating(true);
-    const toastId = toast.loading("Analyzing content and generating questions...");
-
-    try {
-      const engine = localStorage.getItem('ai_engine_mode') || 'cloud';
-      const results = await generationService.uploadGenerationFile(
-        genFile,
-        genCount,
-        genComplexity,
-        engine,
-        selectedSubjectForGen.id.toString(),
-        undefined, // Topic ID is undefined here
-        genPrompt.trim() !== '' ? genPrompt : undefined // Pass the prompt to the backend!
-      );
-
-      // Update indexed files registry
-      const currentFiles = indexedFilesMap[selectedSubjectForGen.id.toString()] || [];
-      if (!currentFiles.includes(genFile.name)) {
-        const updatedFiles = [...currentFiles, genFile.name];
-        const newMap = { ...indexedFilesMap, [selectedSubjectForGen.id.toString()]: updatedFiles };
-        setIndexedFilesMap(newMap);
-        localStorage.setItem('indexed_files_registry', JSON.stringify(newMap));
+      if (editingId) {
+        await knowledgeBaseService.update(editingId, payload);
+        toast.success("Context updated successfully!");
+      } else {
+        await knowledgeBaseService.create(payload);
+        toast.success("New context link added and indexing started!");
       }
 
-      toast.success(`Successfully generated ${results.length || 0} questions!`, { id: toastId });
-      setShowGenerateModal(false);
-      // Removed setGenFile(null) so it stays for the next run if needed
-
-      // Navigate to Vetting Center to review
-      navigate('/vetting');
-    } catch (error: any) {
-      console.error("Generation failed:", error);
-      toast.error(error.response?.data?.error || "AI Generation failed. Check your connection.", { id: toastId });
+      loadContexts();
+      setShowModal(false);
+      resetForm();
+    } catch (error) {
+      console.error("Failed to handle context:", error);
+      toast.error("Failed to process context");
     } finally {
-      setIsGenerating(false);
+      setIsSubmitting(false);
     }
   };
 
+  const handleEditContext = (context: KnowledgeBase) => {
+    setEditingId(context.id);
+    setTitle(context.title);
+    setDescription(context.description || '');
+    setSourceUrl(context.source_url);
+    setSelectedColor(context.color || '#C5B3E6');
+    setSelectedGradient(context.gradient || 'from-[#C5B3E6] to-[#9B86C5]');
+    setShowModal(true);
+  };
+
+  const handleDeleteContext = async (id: number, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
+
+    try {
+      await knowledgeBaseService.delete(id);
+      toast.success("Context deleted");
+      loadContexts();
+    } catch (error) {
+      toast.error("Delete failed.");
+    }
+  };
+
+
   const resetForm = () => {
-    setNewSubjectName('');
-    setNewSubjectCode('');
-    setNewIntroduction('');
+    setEditingId(null);
+    setTitle('');
+    setDescription('');
+    setSourceUrl('');
     setSelectedColor('#C5B3E6');
     setSelectedGradient('from-[#C5B3E6] to-[#9B86C5]');
   };
 
-  const filteredSubjects = subjects
+  const filteredContexts = contexts
     .filter(
-      (subject) =>
-        subject.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        subject.code.toLowerCase().includes(searchQuery.toLowerCase())
+      (ctx: KnowledgeBase) =>
+        ctx.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (ctx.description && ctx.description.toLowerCase().includes(searchQuery.toLowerCase()))
     )
-    .sort((a, b) => {
+    .sort((a: KnowledgeBase, b: KnowledgeBase) => {
       switch (sortOption) {
-        case 'name': return a.name.localeCompare(b.name);
-        case 'code': return a.code.localeCompare(b.code);
-        case 'questions': return (b.questions || 0) - (a.questions || 0);
-        case 'newest': return (b.id && a.id && typeof b.id === 'number' && typeof a.id === 'number') ? b.id - a.id : 0;
+        case 'title': return a.title.localeCompare(b.title);
+        case 'status': return a.status.localeCompare(b.status);
+        case 'newest': return b.id - a.id;
         default: return 0;
       }
     });
@@ -222,36 +166,39 @@ export function SubjectLibrary() {
     <div className="min-h-full pb-32">
       {/* Create Subject Modal */}
       <Modal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="New Subject"
-        subtitle="Add a new course"
+        isOpen={showModal}
+        onClose={() => { setShowModal(false); resetForm(); }}
+        title={editingId ? "Edit Context" : "New Knowledge Context"}
+        subtitle={editingId ? "Update your context details" : "Add a Google Drive PDF link for AI to index"}
       >
         <div className="space-y-4">
           <div className="bg-white p-5 rounded-[28px] border-2 border-[#E5DED6]">
-            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none">Subject Name</label>
+            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none">Context Title</label>
             <input
               type="text"
-              value={newSubjectName}
-              onChange={(e) => setNewSubjectName(e.target.value)}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-[#F5F1ED] rounded-xl px-5 py-3.5 text-[#0A1F1F] font-bold border-2 border-transparent focus:border-[#C5B3E6]/30 outline-none transition-all text-base"
-              placeholder="e.g. Computer Science"
+              placeholder="e.g. Thermodynamics Lecture Notes"
             />
           </div>
 
           <div className="bg-white p-5 rounded-[28px] border-2 border-[#E5DED6]">
-            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none">Subject Code</label>
-            <input
-              type="text"
-              value={newSubjectCode}
-              onChange={(e) => setNewSubjectCode(e.target.value)}
-              className="w-full bg-[#F5F1ED] rounded-xl px-5 py-3.5 text-[#0A1F1F] font-bold border-2 border-transparent focus:border-[#C5B3E6]/30 outline-none transition-all text-base"
-              placeholder="e.g. CS101"
-            />
+            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none">PDF URL (Google Drive/Public)</label>
+            <div className="flex items-center gap-3 bg-[#F5F1ED] rounded-xl px-5 py-3.5 border-2 border-transparent focus-within:border-[#C5B3E6]/30 transition-all">
+              <LinkIcon className="w-5 h-5 text-[#8B9E9E]" />
+              <input
+                type="text"
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none text-[#0A1F1F] font-bold text-base"
+                placeholder="https://drive.google.com/..."
+              />
+            </div>
           </div>
 
           <div className="bg-white p-5 rounded-[28px] border-2 border-[#E5DED6]">
-            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none">Choose Color</label>
+            <label className="text-[10px] font-bold text-[#8B9E9E] uppercase mb-3 block tracking-widest leading-none">Choose Accent</label>
             <div className="grid grid-cols-6 gap-2 pt-1">
               {colorOptions.map((option) => (
                 <button
@@ -269,7 +216,7 @@ export function SubjectLibrary() {
           </div>
 
           <button
-            onClick={handleCreateSubject}
+            onClick={handleSubmitContext}
             disabled={isSubmitting}
             className="w-full bg-[#0A1F1F] text-white rounded-[28px] py-5 font-bold uppercase tracking-[0.2em] text-xs shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 mt-4"
           >
@@ -277,8 +224,8 @@ export function SubjectLibrary() {
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <>
-                <Plus className="w-4 h-4" strokeWidth={3} />
-                <span>Create Subject</span>
+                {editingId ? <Check className="w-4 h-4" strokeWidth={3} /> : <Plus className="w-4 h-4" strokeWidth={3} />}
+                <span>{editingId ? "Save Changes" : "Start Indexing"}</span>
               </>
             )}
           </button>
@@ -307,9 +254,9 @@ export function SubjectLibrary() {
               </motion.div>
             </Link>
             <div className="flex-1">
-              <h1 className="text-xl font-bold text-[#F5F1ED]">Subject Library</h1>
+              <h1 className="text-xl font-bold text-[#F5F1ED]">Knowledge Library</h1>
               <div className="flex items-center gap-2">
-                <p className="text-[10px] font-bold text-[#8B9E9E] uppercase tracking-widest">{subjects.length} subjects indexed</p>
+                <p className="text-[10px] font-bold text-[#8B9E9E] uppercase tracking-widest">{contexts.length} contexts ready</p>
                 <div className={`w-1.5 h-1.5 rounded-full ${isBackendOnline ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'bg-white/20'}`} />
                 <span className="text-[8px] font-bold text-white/40 uppercase tracking-tighter">
                   {isBackendOnline ? (activeModel || 'AI Parallel Active') : 'AI Parallel Dormant'}
@@ -349,7 +296,7 @@ export function SubjectLibrary() {
             <motion.button
               whileHover={{ scale: 1.1, rotate: 90 }}
               whileTap={{ scale: 0.9 }}
-              onClick={() => setShowCreateModal(true)}
+              onClick={() => { resetForm(); setShowModal(true); }}
               className="w-10 h-10 bg-[#C5B3E6] rounded-xl flex items-center justify-center glow-purple"
             >
               <Plus className="w-5 h-5 text-[#0A1F1F]" strokeWidth={3} />
@@ -361,7 +308,7 @@ export function SubjectLibrary() {
               <Search className="w-5 h-5 text-[#8B9E9E]" />
               <input
                 type="text"
-                placeholder="Search subjects..."
+                placeholder="Search knowledge contexts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-1 min-w-0 bg-transparent border-none outline-none text-[#F5F1ED] placeholder:text-[#8B9E9E] text-sm font-medium"
@@ -394,9 +341,8 @@ export function SubjectLibrary() {
                       >
                         <div className="px-3 py-2 text-[8px] font-black text-[#8B9E9E] uppercase tracking-widest border-b border-white/5 mb-1">Sort By</div>
                         {[
-                          { id: 'name', label: 'Alphabetical (A-Z)', icon: Palette },
-                          { id: 'code', label: 'Subject Code', icon: FileStack },
-                          { id: 'questions', label: 'Question Count', icon: Sparkles },
+                          { id: 'title', label: 'Alphabetical (A-Z)', icon: Palette },
+                          { id: 'status', label: 'By Status', icon: Check },
                           { id: 'newest', label: 'Recently Added', icon: Plus },
                         ].map((opt) => (
                           <button
@@ -432,20 +378,20 @@ export function SubjectLibrary() {
         >
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-3xl font-black text-[#0A1F1F] mb-1">{subjects.length}</div>
-              <div className="text-[9px] text-[#0A1F1F] opacity-40 uppercase font-bold tracking-widest">Active</div>
+              <div className="text-3xl font-black text-[#0A1F1F] mb-1">{contexts.length}</div>
+              <div className="text-[9px] text-[#0A1F1F] opacity-40 uppercase font-bold tracking-widest">Contexts</div>
             </div>
             <div>
               <div className="text-3xl font-black text-[#0A1F1F] mb-1">
-                {subjects.reduce((sum, s) => sum + (s.chapters || 0), 0)}
+                {contexts.filter(c => c.status === 'completed').length}
               </div>
-              <div className="text-[9px] text-[#0A1F1F] opacity-40 uppercase font-bold tracking-widest">Chapters</div>
+              <div className="text-[9px] text-[#0A1F1F] opacity-40 uppercase font-bold tracking-widest">Ready</div>
             </div>
             <div>
               <div className="text-3xl font-black text-[#0A1F1F] mb-1">
-                {subjects.reduce((sum, s) => sum + (s.questions || 0), 0)}
+                {contexts.filter(c => c.status === 'pending').length}
               </div>
-              <div className="text-[9px] text-[#0A1F1F] opacity-40 uppercase font-bold tracking-widest">Questions</div>
+              <div className="text-[9px] text-[#0A1F1F] opacity-40 uppercase font-bold tracking-widest">Processing</div>
             </div>
           </div>
         </motion.div>
@@ -458,126 +404,101 @@ export function SubjectLibrary() {
             <p className="text-[#8B9E9E] font-bold uppercase tracking-widest text-xs">Syncing Knowledge Base...</p>
           </div>
         ) : (
-          filteredSubjects.map((subject, index) => (
-            <motion.div key={subject.id} layout>
-              <Link to={`/subjects/${subject.id}`}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  whileHover={{ y: -5 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`bg-gradient-to-br ${subject.gradient} rounded-[32px] p-6 border-4 border-white/20 relative overflow-hidden shadow-xl`}
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-[128px] pointer-events-none" />
+          filteredContexts.map((context, index) => (
+            <motion.div key={context.id} layout>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -5 }}
+                className={`bg-gradient-to-br ${context.gradient || 'from-[#C5B3E6] to-[#9B86C5]'} rounded-[32px] p-6 border-4 border-white/20 relative overflow-hidden shadow-xl`}
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-[128px] pointer-events-none" />
 
-                  <div className="flex items-center gap-5 relative z-10">
-                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center border-4 border-white/40 flex-shrink-0 bg-white/10 backdrop-blur-md shadow-inner">
-                      <span className="text-xl font-bold text-[#0A1F1F]">{subject.code.slice(0, 2).toUpperCase()}</span>
-                    </div>
+                <div className="flex items-center gap-5 relative z-10">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center border-4 border-white/40 flex-shrink-0 bg-white/10 backdrop-blur-md shadow-inner">
+                    {context.status === 'completed' ? (
+                      <Check className="w-8 h-8 text-[#0A1F1F]" strokeWidth={3} />
+                    ) : context.status === 'failed' ? (
+                      <X className="w-8 h-8 text-red-600" strokeWidth={3} />
+                    ) : (
+                      <Loader2 className="w-8 h-8 text-[#0A1F1F] animate-spin" strokeWidth={3} />
+                    )}
+                  </div>
 
-                    <div className="flex-1 min-w-0 pr-4">
-                      <h3 className="text-[#0A1F1F] font-bold text-lg mb-1 leading-tight truncate">
-                        {subject.name}
-                      </h3>
-                      <p className="text-[10px] text-[#0A1F1F] opacity-60 font-bold uppercase tracking-widest">
-                        {subject.code} • {subject.chapters || 0} Chapters
-                      </p>
-                    </div>
-
+                  <div className="flex-1 min-w-0 pr-4">
+                    <h3 className="text-[#0A1F1F] font-bold text-lg mb-1 leading-tight truncate">
+                      {context.title}
+                    </h3>
                     <div className="flex items-center gap-2">
-                      <div className="flex flex-col items-end gap-1">
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-2xl font-black text-[#0A1F1F]">{subject.questions || 0}</span>
-                          <span className="text-[10px] text-[#0A1F1F] opacity-40 font-bold uppercase">QA</span>
-                        </div>
-                        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-                          <ChevronRight className="w-5 h-5 text-[#0A1F1F]" />
-                        </div>
-                      </div>
+                      <p className="text-[10px] text-[#0A1F1F] opacity-60 font-bold uppercase tracking-widest flex items-center gap-1">
+                        {context.status === 'completed' ? 'Ready for Context' : context.status.toUpperCase()}
+                      </p>
+                      {context.source_url && (
+                        <>
+                          <span className="text-[#0A1F1F] opacity-20">•</span>
+                          <span className="text-[9px] text-[#0A1F1F]/40 font-bold truncate max-w-[100px]">
+                            {context.source_url.split('/').pop() || 'Google Drive'}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
 
-                      <div className="flex flex-col gap-2 border-l border-white/10 pl-2 ml-1">
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-col gap-2 border-l border-white/20 pl-2">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        disabled={context.status !== 'completed'}
+                        onClick={() => {
+                          setSelectedContextForGen(context);
+                          setShowGenerateModal(true);
+                        }}
+                        className={`w-10 h-10 ${context.status === 'completed' ? 'bg-[#0A1F1F] text-white shadow-lg' : 'bg-[#0A1F1F]/10 text-[#0A1F1F]/30'} rounded-xl flex items-center justify-center border border-white/10`}
+                        title="Smart AI Generate"
+                      >
+                        <Sparkles className="w-5 h-5" />
+                      </motion.button>
+
+                      <div className="flex gap-2">
                         <motion.button
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSelectedSubjectForGen(subject);
-                            setShowGenerateModal(true);
-                          }}
-                          className="w-8 h-8 bg-[#C5B3E6] rounded-lg flex items-center justify-center text-[#0A1F1F] border border-[#C5B3E6]/20"
-                          title="Smart AI Generate"
+                          onClick={() => handleEditContext(context)}
+                          className="w-8 h-8 bg-white/40 rounded-lg flex items-center justify-center text-[#0A1F1F] border border-white/20"
+                          title="Edit Context"
                         >
-                          <Sparkles className="w-4 h-4" />
+                          <Palette className="w-4 h-4" />
                         </motion.button>
-
-                        {(typeof subject.id === 'number' && subject.id > 100) ? (
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleSaveToDB(subject); }}
-                            className="w-8 h-8 bg-[#0A1F1F]/20 rounded-lg flex items-center justify-center text-[#0A1F1F] border border-white/20"
-                            title="Save to database to edit/delete"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </motion.button>
-                        ) : (
-                          <>
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/subjects/${subject.id}`); }}
-                              className="w-8 h-8 bg-[#0A1F1F]/20 rounded-lg flex items-center justify-center text-[#0A1F1F] border border-white/20"
-                            >
-                              <Palette className="w-4 h-4" />
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteSubject(subject.id, subject.name); }}
-                              className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center text-red-600 border border-red-500/20"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </motion.button>
-                          </>
-                        )}
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleDeleteContext(context.id, context.title)}
+                          className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center text-red-600 border border-red-500/20"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </motion.button>
                       </div>
                     </div>
                   </div>
-                </motion.div>
-              </Link>
+                </div>
+              </motion.div>
             </motion.div>
           ))
         )}
       </div>
-      {/* Smart AI Generation Modal - Now Unified using AIPromptBox */}
+
+      {/* Smart AI Generation Modal */}
       <AnimatePresence>
         {showGenerateModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowGenerateModal(false)}
-              className="absolute inset-0 bg-[#0A1F1F]/40 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-2xl bg-[#F5F1ED] rounded-[40px] shadow-2xl overflow-hidden"
-            >
-              <div className="p-1">
-                <AIPromptBox
-                  onClose={() => setShowGenerateModal(false)}
-                  subjectId={selectedSubjectForGen?.id.toString()}
-                  subjectName={selectedSubjectForGen?.name}
-                  engine={localStorage.getItem('ai_engine_mode') || 'cloud'} // Respect user choice or fallback to cloud
-                />
-              </div>
-            </motion.div>
-          </div>
+          <AIPromptBox
+            onClose={() => setShowGenerateModal(false)}
+            kbId={selectedContextForGen?.id}
+            subjectName={selectedContextForGen?.title}
+            engine={localStorage.getItem('ai_engine_mode') || 'cloud'}
+          />
         )}
       </AnimatePresence>
     </div>

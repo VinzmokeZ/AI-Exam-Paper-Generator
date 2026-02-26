@@ -149,7 +149,24 @@ export function Dashboard() {
   const nextLevelXP = currentLevel * 1000;
   const xpProgress = (currentXP / nextLevelXP) * 100;
   const currentStreak = stats?.streak || 0;
-  const todayProgress = stats?.approvalRate || 0;
+
+  let todayProgress = stats?.approvalRate || 0;
+  try {
+    const saved = localStorage.getItem('ai_exam_todays_goals');
+    if (saved) {
+      const parsedGoals = JSON.parse(saved);
+      if (parsedGoals.length > 0) {
+        const completed = parsedGoals.filter((g: any) => g.completed).length;
+        todayProgress = Math.round((completed / parsedGoals.length) * 100);
+      } else {
+        todayProgress = 0;
+      }
+    } else {
+      todayProgress = 0; // Default when not yet initialized is 0 completed out of 3 defaults
+    }
+  } catch (e) {
+    todayProgress = stats?.approvalRate || 0;
+  }
 
   // Search Logic
   useEffect(() => {
@@ -322,7 +339,26 @@ export function Dashboard() {
                 </motion.button>
               </div>
 
-              <p className="text-xs text-[#8B9E9E] font-bold">You are {stats?.level || 1} Levels deep into your knowledge journey.</p>
+              <div className="flex items-center justify-between gap-6 mt-4">
+                <p className="text-xs text-[#8B9E9E] font-bold leading-relaxed max-w-[140px]">
+                  You are {stats?.level || 1} Levels deep into your knowledge journey.
+                </p>
+
+                {/* REFINED SQUARE-ISH QUICK GENERATE CARD */}
+                <Link to="/generate" className="flex-shrink-0 mr-4">
+                  <motion.div
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="bg-gradient-to-br from-[#C5B3E6] to-[#9B86C5] rounded-[24px] p-4 border-4 border-white/40 shadow-xl flex flex-col items-center justify-center gap-2 relative overflow-hidden w-[100px] h-[90px]"
+                  >
+                    <div className="absolute top-0 right-0 w-12 h-12 bg-white/10 rounded-bl-[40px] pointer-events-none" />
+                    <div className="w-8 h-8 bg-[#0A1F1F] rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg relative z-10 transition-transform group-hover:scale-110">
+                      <Sparkles className="w-4 h-4 text-[#C5B3E6]" />
+                    </div>
+                    <span className="text-[10px] font-black text-[#0A1F1F] uppercase tracking-tighter leading-none relative z-10 text-center">GENERATE<br />EXAM</span>
+                  </motion.div>
+                </Link>
+              </div>
             </div>
 
             <div className="flex flex-col items-end gap-3 flex-shrink-0">
@@ -374,6 +410,8 @@ export function Dashboard() {
               </div>
             </div>
           </div>
+
+
 
           {/* Level & XP System - Compact & Clean */}
           <div className="bg-white rounded-2xl p-4 border-3 border-[#E5DED6] mb-4">
@@ -509,7 +547,7 @@ export function Dashboard() {
                 transition={{ type: "spring", delay: 0.2 }}
                 className="text-4xl font-bold text-[#F5F1ED] leading-none"
               >
-                {stats?.approvalRate || 0}%
+                {stats?.performance || 0}%
               </motion.span>
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -524,20 +562,23 @@ export function Dashboard() {
 
             {/* Segmented Progress Bar with Colors */}
             <div className="segmented-progress relative z-10 mb-3">
-              {Array.from({ length: 25 }).map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ scaleY: 0 }}
-                  animate={{ scaleY: i < 22 ? 1 : 0.3 }}
-                  transition={{ delay: i * 0.02, duration: 0.3 }}
-                  className="progress-segment"
-                  style={{
-                    backgroundColor: i < 22
-                      ? ['#C5B3E6', '#8BE9FD', '#FFB86C', '#FF6AC1', '#50FA7B'][Math.floor(i / 5)]
-                      : 'rgba(255, 255, 255, 0.2)'
-                  }}
-                />
-              ))}
+              {Array.from({ length: 25 }).map((_, i) => {
+                const threshold = Math.round((stats?.performance || 0) / 4);
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ scaleY: 0 }}
+                    animate={{ scaleY: i < threshold ? 1 : 0.3 }}
+                    transition={{ delay: i * 0.02, duration: 0.3 }}
+                    className="progress-segment"
+                    style={{
+                      backgroundColor: i < threshold
+                        ? ['#C5B3E6', '#8BE9FD', '#FFB86C', '#FF6AC1', '#50FA7B'][Math.floor(i / 5)]
+                        : 'rgba(255, 255, 255, 0.2)'
+                    }}
+                  />
+                );
+              })}
             </div>
 
             {/* Mini Stats */}
@@ -548,7 +589,7 @@ export function Dashboard() {
               </div>
               <div className="bg-[#0A1F1F] rounded-xl p-2.5 text-center">
                 <p className="text-[10px] text-[#8B9E9E] leading-tight mb-1">Approval</p>
-                <p className="text-lg font-bold text-[#50FA7B] leading-none">{stats?.approvalRate || 0}%</p>
+                <p className="text-lg font-bold text-[#50FA7B] leading-none">{stats?.performance || 0}%</p>
               </div>
               <div className="bg-[#0A1F1F] rounded-xl p-2.5 text-center">
                 <p className="text-[10px] text-[#8B9E9E] leading-tight mb-1">Exams</p>
