@@ -86,12 +86,12 @@ FORMAT: [{{"question_text":"What is X?","type":"MCQ","options":["First option te
 """
 
         # Sequential fallback chain for Gemini Direct API
-        # Both models confirmed available on this free key (15 req/min, 1500/day)
+        # Order by daily quota: 2.0-flash-lite (1500/day) → 2.0-flash (200/day) → 2.5-flash-lite (20/day) → last resort
         FALLBACK_CHAIN = [
-            "gemini-2.0-flash-lite",    # Attempt 1 - primary (fastest)
-            "gemini-2.5-flash-lite",    # Attempt 2 - experimental (user requested priority)
-            "gemini-2.0-flash",         # Attempt 3 - stable alternative
-            "gemini-2.0-pro-exp-02-05", # Attempt 4 - ultimate fallback (highest capability)
+            "gemini-2.0-flash-lite",    # Attempt 1 - primary (fastest, 1500/day)
+            "gemini-2.0-flash",         # Attempt 2 - stable alternative (200/day)
+            "gemini-2.5-flash-lite",    # Attempt 3 - experimental last resort (20/day!)
+            "gemini-1.5-flash",         # Attempt 4 - ultimate fallback (broad availability)
         ]
 
         for attempt in range(max_retries):
