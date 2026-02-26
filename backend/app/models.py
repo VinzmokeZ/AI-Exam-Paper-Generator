@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, JSON, Text
 from sqlalchemy.orm import DeclarativeBase, relationship
 from datetime import datetime
 
@@ -47,11 +47,11 @@ class Question(Base):
     id = Column(Integer, primary_key=True, index=True)
     topic_id = Column(Integer, ForeignKey("topics.id"))
     rubric_id = Column(Integer, ForeignKey("rubrics.id"), nullable=True)
-    question_text = Column(String(5000))
+    question_text = Column(Text)
     question_type = Column(String(50))  # MCQ, Short, Essay
     options = Column(JSON, nullable=True)
-    correct_answer = Column(String(2000))
-    explanation = Column(String(5000), nullable=True)
+    correct_answer = Column(Text)
+    explanation = Column(Text, nullable=True)
     marks = Column(Integer, default=5)
     bloom_level = Column(String(50)) 
     course_outcome = Column(String(50))
