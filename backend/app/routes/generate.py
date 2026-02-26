@@ -341,8 +341,10 @@ def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db))
             return {"success": True, "message": "All questions rejected. Cleared drafts."}
             
         # 3. Save Questions
+        import json
         stored_questions_data = []
         for q_data in request.questions:
+            co_data = q_data.get('courseOutcomes') or q_data.get('course_outcomes', {})
             new_q = Question(
                 topic_id=topic.id,
                 rubric_id=q_data.get('rubric_id'),
@@ -352,7 +354,7 @@ def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db))
                 correct_answer=str(q_data.get('correct_answer', '')),
                 explanation=q_data.get('explanation', ''),
                 bloom_level=q_data.get('bloom_level') or q_data.get('complexity', 'Apply'),
-                course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes', {}),
+                course_outcomes=co_data,
                 status="approved"
             )
             db.add(new_q)
@@ -361,6 +363,7 @@ def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db))
         # 3.2 Handle Rejected Questions
         if request.rejected_questions:
             for q_data in request.rejected_questions:
+                co_data = q_data.get('courseOutcomes') or q_data.get('course_outcomes', {})
                 if q_data.get('id'):
                     db.query(Question).filter(Question.id == q_data['id']).update({"status": "rejected"})
                 else:
@@ -372,7 +375,7 @@ def bulk_save_questions(request: BulkSaveRequest, db: Session = Depends(get_db))
                         correct_answer=str(q_data.get('correct_answer', '')),
                         explanation=q_data.get('explanation', ''),
                         bloom_level=q_data.get('bloom_level') or q_data.get('complexity', 'Apply'),
-                        course_outcomes=q_data.get('courseOutcomes') or q_data.get('course_outcomes', {}),
+                        course_outcomes=co_data,
                         status="rejected"
                     )
                     db.add(new_rejected)
