@@ -87,6 +87,11 @@ def merge_db():
                 # Filter out columns that exist in local but not in cloud
                 filtered_data = {k: v for k, v in data.items() if k in dest_columns}
                 
+                # Sanitize strings to remove NUL characters (\x00) which Postgres rejects
+                for k, v in filtered_data.items():
+                    if isinstance(v, str):
+                        filtered_data[k] = v.replace('\x00', '')
+
                 stmt = select(dest_table).where(dest_table.c.id == filtered_data['id'])
                 exists = session.execute(stmt).first()
                 
