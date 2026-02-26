@@ -130,8 +130,8 @@ export const discoverConnectivity = async () => {
     targets.push(emulatorHostUrl);
     targets.push(tunnelUrl);
 
-    // 4. CLOUD BACKEND (Render) - Add your URL here once deployed
-    const cloudUrl = 'https://ai-exam-paper-generator-eyb1.onrender.com';
+    // 4. CLOUD BACKEND (Render) - Automatically connected to your new Render account
+    const cloudUrl = 'https://ai-exam-paper-generator-i6iz.onrender.com';
     targets.push(cloudUrl);
 
     // Deduplicate while preserving order
@@ -141,9 +141,14 @@ export const discoverConnectivity = async () => {
         try {
             addLog(`Probing: ${url}...`);
             const isTunnel = url.includes('loca.lt');
+            const isRender = url.includes('onrender.com');
+            const probeTimeout = isRender ? 60000 : (isTunnel ? 15000 : 4000);
+
+            addLog(`Probing: ${url} (timeout: ${probeTimeout}ms)...`);
+
             const testApi = axios.create({
                 baseURL: `${url}/api`,
-                timeout: isTunnel ? 10000 : 3000 // 3s local (fast), 10s tunnel
+                timeout: probeTimeout
             });
             const response = await testApi.get('/health', {
                 headers: { 'bypass-tunnel-reminder': 'true' }

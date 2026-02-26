@@ -23,9 +23,9 @@ class RAGService:
         self.collection = None
         self._enabled = False
         # Step 0: Check if we are on Render (Free tier memory limits)
-        if os.getenv("RENDER") == "true":
-            print("[RAG] Detected Render environment. Disabling RAG for stability (Free Tier).")
-            return
+        self.is_render = os.getenv("RENDER") == "true"
+        if self.is_render:
+            print("[RAG] Detected Render environment. RAG will operate in QUERY-ONLY mode (no new indexing).")
 
         # Step 1: Load embedding model (crash-proof, lazy import)
         try:
@@ -66,6 +66,9 @@ class RAGService:
 
     def auto_index_kb(self):
         """Indexes everything in the knowledge_base folder."""
+        if self.is_render:
+            print("[RAG] 🛑 auto_index_kb blocked on Render (Query-Only mode).")
+            return 0
         if not self._enabled or not self.collection:
             print("[RAG] ⚠️ Skipping auto-indexing: RAG service is disabled or not initialized.")
             return 0
@@ -178,6 +181,13 @@ class RAGService:
 
     async def process_knowledge_base(self, kb: KnowledgeBase, db: Session):
         """Processes a KnowledgeBase entry: downloads, extracts text, and chunks."""
+        if self.is_render:
+            print(f"[RAG] 🛑 KB Processing blocked on Render for: {kb.title}")
+            kb.status = "failed"
+            kb.error_message = "PDF processing is disabled on the free cloud tier to prevent crashes. Please index this PDF on your local PC and sync via GitHub."
+            db.commit()
+            return
+
         print(f"[RAG] Processing KnowledgeBase: {kb.title} ({kb.source_type})")
         
         text = ""

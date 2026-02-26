@@ -343,21 +343,6 @@ export function Dashboard() {
                 <p className="text-xs text-[#8B9E9E] font-bold leading-relaxed max-w-[140px]">
                   You are {stats?.level || 1} Levels deep into your knowledge journey.
                 </p>
-
-                {/* REFINED SQUARE-ISH QUICK GENERATE CARD */}
-                <Link to="/generate" className="flex-shrink-0 mr-4">
-                  <motion.div
-                    whileHover={{ scale: 1.05, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="bg-gradient-to-br from-[#C5B3E6] to-[#9B86C5] rounded-[24px] p-4 border-4 border-white/40 shadow-xl flex flex-col items-center justify-center gap-2 relative overflow-hidden w-[100px] h-[90px]"
-                  >
-                    <div className="absolute top-0 right-0 w-12 h-12 bg-white/10 rounded-bl-[40px] pointer-events-none" />
-                    <div className="w-8 h-8 bg-[#0A1F1F] rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg relative z-10 transition-transform group-hover:scale-110">
-                      <Sparkles className="w-4 h-4 text-[#C5B3E6]" />
-                    </div>
-                    <span className="text-[10px] font-black text-[#0A1F1F] uppercase tracking-tighter leading-none relative z-10 text-center">GENERATE<br />EXAM</span>
-                  </motion.div>
-                </Link>
               </div>
             </div>
 
@@ -680,7 +665,7 @@ export function Dashboard() {
           </div>
 
           <div className="space-y-3">
-            {recentActivities.map((activity, index) => (
+            {Array.isArray(recentActivities) && recentActivities.map((activity, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, x: -20 }}
