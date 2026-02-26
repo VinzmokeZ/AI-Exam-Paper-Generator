@@ -69,15 +69,19 @@ def merge_db():
                 continue
             
             count = 0
+            dest_columns = [col.name for col in dest_table.columns]
             for row in rows:
                 data = dict(row._mapping)
-                stmt = select(dest_table).where(dest_table.c.id == data['id'])
+                # Filter out columns that exist in local but not in cloud
+                filtered_data = {k: v for k, v in data.items() if k in dest_columns}
+                
+                stmt = select(dest_table).where(dest_table.c.id == filtered_data['id'])
                 exists = session.execute(stmt).first()
                 
                 if exists:
-                    session.execute(dest_table.update().where(dest_table.c.id == data['id']).values(**data))
+                    session.execute(dest_table.update().where(dest_table.c.id == filtered_data['id']).values(**filtered_data))
                 else:
-                    session.execute(dest_table.insert().values(**data))
+                    session.execute(dest_table.insert().values(**filtered_data))
                 count += 1
             
             session.commit()
