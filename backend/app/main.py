@@ -156,6 +156,36 @@ async def sync_cloud():
     except Exception as e:
         return {"status": "failed", "error": str(e)}
 
+@app.get("/api/fix-seq")
+async def fix_sequences():
+    """Diagnostic endpoint to force-reset auto-increment sequence counters on Postgres."""
+    import os
+    from sqlalchemy import create_engine, text
+    cloud_url = os.getenv("DATABASE_URL")
+    if not cloud_url:
+        return {"error": "No DATABASE_URL"}
+    cloud_url = cloud_url.replace("postgres://", "postgresql://", 1)
+    
+    try:
+        engine = create_engine(cloud_url)
+        tables = [
+            "subjects", "topics", "knowledge_bases", "knowledge_chunks", "documents", 
+            "rubrics", "rubric_question_distributions", "rubric_lo_distributions", 
+            "questions", "user_stats", "exam_history", "activity_logs", 
+            "notifications", "achievements"
+        ]
+        results = {}
+        with engine.begin() as conn:
+            for t in tables:
+                try:
+                    conn.execute(text(f"SELECT setval('{t}_id_seq', COALESCE((SELECT MAX(id)+1 FROM {t}), 1), false);"))
+                    results[t] = "Success"
+                except Exception as e:
+                    results[t] = str(e)
+        return {"status": "Complete", "results": results}
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to AI Exam Oracle API"}
