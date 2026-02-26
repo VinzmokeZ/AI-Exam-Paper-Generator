@@ -141,6 +141,21 @@ async def ping():
     """Ultra-lightweight keep-alive endpoint. No DB or LLM checks."""
     return {"status": "alive"}
 
+@app.get("/api/sync-cloud")
+async def sync_cloud():
+    """Endpoint to trigger an internal pulling of the local SQLite DB from GitHub and merging it."""
+    import subprocess
+    import sys
+    try:
+        # Run the script we just created
+        result = subprocess.run(
+            [sys.executable, "backend/run_internal_sync.py"], 
+            capture_output=True, text=True, timeout=60
+        )
+        return {"status": "success", "output": result.stdout, "errors": result.stderr}
+    except Exception as e:
+        return {"status": "failed", "error": str(e)}
+
 @app.get("/")
 async def root():
     return {"message": "Welcome to AI Exam Oracle API"}
