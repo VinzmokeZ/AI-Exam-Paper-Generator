@@ -158,6 +158,11 @@ FORMAT: [{{"question_text":"What is X?","type":"MCQ","options":["First option te
                 if attempt < max_retries - 1:
                     time.sleep(2)
                     continue
+                
+                # If we've exhausted all retries, check if it was a rate limit issue
+                if "429" in error_msg or "Resource has been exhausted" in error_msg or "quota" in error_msg.lower():
+                    raise ValueError(f"Free API Quota Exhausted: You have hit the daily or per-minute generation limit for your Google Gemini free tier. Please wait for the limit to reset, or provide a new API key.")
+                
                 raise e
         return []
 
